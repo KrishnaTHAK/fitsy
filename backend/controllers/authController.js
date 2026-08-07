@@ -44,7 +44,7 @@ const registerUser = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
-          shippingAddress: user.shippingAddress || null,
+          shippingAddresses: user.shippingAddresses || [],
         }
       });
     } else {
@@ -73,7 +73,7 @@ const loginUser = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
-          shippingAddress: user.shippingAddress || null,
+          shippingAddresses: user.shippingAddresses || [],
         }
       });
     } else {
@@ -109,7 +109,7 @@ const getUserProfile = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
-          shippingAddress: user.shippingAddress || null,
+          shippingAddresses: user.shippingAddresses || [],
         }
       });
     } else {
@@ -131,7 +131,10 @@ const updateUserAddress = async (req, res) => {
     const user = await User.findById(req.user._id);
 
     if (user) {
-      user.shippingAddress = {
+      if (!user.shippingAddresses) {
+        user.shippingAddresses = [];
+      }
+      user.shippingAddresses.push({
         fullName,
         address,
         city,
@@ -139,7 +142,7 @@ const updateUserAddress = async (req, res) => {
         postalCode,
         country,
         phoneNumber,
-      };
+      });
 
       const updatedUser = await user.save();
 
@@ -148,7 +151,7 @@ const updateUserAddress = async (req, res) => {
           _id: updatedUser._id,
           name: updatedUser.name,
           email: updatedUser.email,
-          shippingAddress: updatedUser.shippingAddress,
+          shippingAddresses: updatedUser.shippingAddresses,
         }
       });
     } else {
@@ -156,7 +159,7 @@ const updateUserAddress = async (req, res) => {
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 

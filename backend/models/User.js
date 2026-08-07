@@ -16,15 +16,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    shippingAddress: {
-      fullName: String,
-      address: String,
-      city: String,
-      state: String,
-      postalCode: String,
-      country: String,
-      phoneNumber: String,
-    },
+    shippingAddresses: [
+      {
+        fullName: String,
+        address: String,
+        city: String,
+        state: String,
+        postalCode: String,
+        country: String,
+        phoneNumber: String,
+      }
+    ],
   },
   {
     timestamps: true,
@@ -37,9 +39,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 // Middleware to hash password before saving to database
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
-    next();
+    return;
   }
 
   const salt = await bcrypt.genSalt(10);

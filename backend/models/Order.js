@@ -44,6 +44,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 'Pending',
     },
+    paymentMethod: {
+      type: String,
+      required: true,
+      default: 'Cash on Delivery',
+    },
   },
   {
     timestamps: true,
