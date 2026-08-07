@@ -1,0 +1,480 @@
+================================================================================
+  FITSY — FRONTEND PROJECT DOCUMENTATION
+  Last updated: 2026-08-06
+================================================================================
+
+TABLE OF CONTENTS
+  1. Project Overview
+  2. Tech Stack
+  3. Directory Structure
+  4. Architecture & Data Flow
+  5. Key Files Explained
+  6. State Management
+  7. Virtual Try-On (AR) System
+  8. Backend Integration Guide
+  9. Changes Made (Integration-Ready Refactor)
+  10. Environment Variables
+  11. API Contract Expected from Backend
+  12. Open Questions / Future Work
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+Fitsy is a premium fashion e-commerce storefront with a Virtual Try-On (VTO)
+feature. Users can browse products across categories (Clothes, Glasses, Shoes,
+Jewelry, Makeup, Accessories), add to cart, save to wishlist, and preview items
+using their webcam via an AR overlay.
+
+The frontend is a React + Vite single-page application. As of the current build
+it is fully self-contained — auth, cart, and wishlist are all powered by
+localStorage with no backend calls. The refactor described in Section 9 makes
+it integration-ready for the Express + MongoDB backend (see /backend).
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+  Runtime       : React 18 (JSX)
+  Build tool    : Vite 5
+  Routing       : react-router-dom v6
+  Icons         : lucide-react
+  AR / Vision   : @mediapipe/tasks-vision (FaceLandmarker)
+  Styling       : Vanilla CSS (index.css, ~25 KB, custom properties / themes)
+  Package mgr   : npm
+
+  Backend (separate folder)
+    Runtime     : Node.js + Express 5
+    Database    : MongoDB via Mongoose 9
+    Auth        : JWT (jsonwebtoken) + bcryptjs
+    Middleware  : cors, dotenv, nodemon (dev)
+
+================================================================================
+3. DIRECTORY STRUCTURE
+================================================================================
+
+  frontend/
+  ├── index.html                  Entry point HTML
+  ├── vite.config.js              Vite config (now includes /api dev proxy)
+  ├── .env.example                Environment variable template
+  ├── package.json
+  │
+  └── src/
+      ├── main.jsx                React root mount
+      ├── App.jsx                 Provider tree + Router + Routes
+      ├── index.css               Full design system (dark/light theme tokens)
+      │
+      ├── assets/
+      │   ├── fitsy-logo.svg
+      │   ├── products/           Local product images (jpg) – 7 files
+      │   └── vto/                AR glasses overlay SVGs – 8 files
+      │
+      ├── data/
+      │   └── products.js         Static product catalog (54 items generated
+      │                           from CATALOG_BLUEPRINTS). Also exports:
+      │                           CATEGORIES, NAV_ITEMS, getProductById().
+      │                           Acts as the fallback when backend is offline.
+      │
+      ├── services/               [NEW after refactor]
+      │   ├── tokenStore.js       JWT in-memory store with localStorage backup
+      │   └── api.js              Centralized fetch wrapper (auth, products,
+      │                           cart, wishlist endpoints)
+      │
+      ├── context/
+      │   ├── AuthContext.jsx     User session (login, register, logout)
+      │   ├── StoreContext.jsx    Cart + Wishlist state
+      │   └── ProductsContext.jsx [NEW] Products data (API → static fallback)
+      │
+      ├── hooks/
+      │   └── useAsync.js         [NEW] Generic hook: { data, loading, error, run }
+      │
+      ├── utils/
+      │   └── safeStorage.js      localStorage helpers (get, set, remove,
+      │                           readJson, writeJson, clearAll)
+      │
+      ├── components/
+      │   ├── AppErrorBoundary.jsx  Class-based React error boundary
+      │   ├── AROverlay.jsx         Virtual try-on camera overlay (MediaPipe)
+      │   ├── BrandLogo.jsx         Fitsy SVG wordmark
+      │   ├── Footer.jsx            Copyright + policy links
+      │   ├── LoadingSpinner.jsx    [NEW] Shared loading indicator
+      │   ├── Navbar.jsx            Top navigation + cart/wishlist badge counts
+      │   ├── ProductCard.jsx       Tile used in grid/mosaic layouts
+      │   ├── ProductImage.jsx      img with SVG fallback per category
+      │   └── ProtectedRoute.jsx    [NEW] Route guard (redirects to /auth)
+      │
+      └── pages/
+          ├── Home.jsx            Hero, featured grid, category rail, split story
+          ├── Catalog.jsx         Filter sidebar + mosaic product grid
+          ├── ProductPage.jsx     Detail view + AR try-on launcher
+          ├── AuthPage.jsx        Sign in / Create account form
+          ├── AccountPage.jsx     Cart & wishlist display, logout
+          └── StaticPage.jsx      Generic page for Privacy / Platform Policy
+
+================================================================================
+4. ARCHITECTURE & DATA FLOW
+================================================================================
+
+  Provider tree (App.jsx):
+    AppErrorBoundary
+      AuthProvider           ← user session, JWT token
+        ProductsProvider     ← product catalog (API or static)
+          StoreProvider      ← cart + wishlist (uses AuthContext for user)
+            Router
+              Navbar
+              <Routes>
+              Footer
+
+  Data flow:
+    1. On app load, AuthProvider reads saved session from localStorage.
+    2. StoreProvider listens to AuthContext for user changes and loads
+       cart + wishlist (from API if backend enabled, else localStorage).
+    3. ProductsProvider fetches product catalog from API on mount;
+       falls back to static PRODUCTS array if fetch fails or no VITE_API_URL.
+    4. Pages/components consume contexts via hooks:
+         useAuth()     → user, isAuthenticated, loading, error, login, register, logout
+         useStore()    → cartItems, wishlistItems, addToCart, removeFromCart, toggleWishlist
+         useProducts() → products, categories, loading, error, getProductById
+
+  Mode detection (IS_BACKEND_ENABLED):
+    const IS_BACKEND_ENABLED = Boolean(import.meta.env.VITE_API_URL);
+    - If VITE_API_URL is set → contexts call the API, token is managed
+    - If not set → localStorage mock (fully functional for demo/dev without backend)
+
+================================================================================
+5. KEY FILES EXPLAINED
+================================================================================
+
+  src/data/products.js
+    - Defines CATALOG_BLUEPRINTS (grouped by category with vtoType, sizes)
+    - Generates PRODUCTS flat array by flattening blueprints into 54 items
+    - Each product: { id, name, price, rating, accent, badge, image, category,
+      vtoType, sizes, inventory, description, tryOn? }
+    - tryOn is only on Glasses products: { overlayKey, widthMultiplier, bridgeOffsetY }
+    - Acts as the static fallback even after backend integration
+
+  src/components/AROverlay.jsx
+    - Full AR pipeline: getUserMedia → MediaPipe FaceLandmarker → canvas-free
+      face tracking via CSS absolute positioning
+    - Two modes:
+        face-tracking (Glasses): places SVG overlay on detected face landmarks
+        guided-preview (all others): overlays product image on a static guide
+    - Falls back gracefully if camera is denied or MediaPipe fails to load
+    - Does NOT currently call the backend (no session saving / analytics)
+
+  src/components/ProductImage.jsx
+    - Handles broken image URLs (common with Unsplash) by generating a
+      category-styled SVG fallback using data URIs
+    - Each category has its own color palette for the fallback art
+
+  src/utils/safeStorage.js
+    - All localStorage reads/writes wrapped in try/catch to handle
+      private browsing, storage quota errors, etc.
+    - safeStorageClearAll(keys?) added for logout cleanup
+
+================================================================================
+6. STATE MANAGEMENT
+================================================================================
+
+  AuthContext
+    Stored  : session user object in localStorage (fitsy-auth-user)
+    Mock    : user registry stored in localStorage (fitsy-auth-users)
+    API     : POST /api/auth/login → { token, user }
+              POST /api/auth/register → { token, user }
+              POST /api/auth/logout
+    Exposes : { user, isAuthenticated, loading, error, login, register, logout }
+    Note    : login() and register() are async in both mock and API modes.
+              They always return { success: bool, message?: string, user?: obj }
+
+  StoreContext
+    Old API  (pre-refactor):
+      getCartItems(userId), getWishlistItems(userId)
+      addToCart({ userId, product, size })
+      removeFromCart({ userId, productId, size })
+      toggleWishlist({ userId, product })
+
+    New API  (post-refactor):
+      cartItems[]   — flat array, auto-scoped to logged-in user
+      wishlistItems[] — flat array, auto-scoped to logged-in user
+      addToCart({ product, size })         — async, optimistic update
+      removeFromCart({ productId, size })  — async, optimistic update
+      toggleWishlist({ product })          — async, optimistic update
+
+    Cart item shape:
+      { productId, size, quantity, name, price, image }
+    Wishlist item shape:
+      { productId, name, price, image, category }
+
+  ProductsContext
+    Source  : API GET /api/products → falls back to static PRODUCTS array
+    Exposes : { products, categories, loading, error, getProductById(id) }
+    Note    : getProductById checks both numeric id (static) and string _id (MongoDB)
+
+================================================================================
+7. VIRTUAL TRY-ON (AR) SYSTEM
+================================================================================
+
+  Trigger   : "Virtual Try-On" button on ProductPage → sets isAROpen = true
+              → renders <AROverlay product={product} onClose={...} />
+
+  Face tracking pipeline (Glasses category only):
+    1. getUserMedia({ video: { facingMode: 'user', 1280×720 } })
+    2. FaceLandmarker.createFromOptions (loads float16 model from Google CDN)
+    3. requestAnimationFrame loop → detectForVideo() → face landmarks array
+    4. Key landmarks used: 127 (leftTemple), 356 (rightTemple),
+       33 (leftEye), 263 (rightEye), 168 (noseBridge), 10 (forehead), 152 (chin)
+    5. Geometry: faceWidth, eyeDistance, faceHeight, centerX, centerY, rotation angle
+    6. Validity checks: face size, geometry ratio, eyes-near-nose, inside stage bounds
+    7. Smoothing: 72/28 EMA blend between previous and next style
+    8. Output: CSS { left, top, width, transform } applied to overlay img element
+
+  Overlay SVG map (GLASSES_OVERLAY_MAP):
+    aviator, catEye, clear, oval, round, shield, square, wayfarer
+    → Each product.tryOn.overlayKey maps to one of these SVGs
+
+  Non-face products (Clothes, Shoes, etc.):
+    → Product image shown as a static overlay with a body guide silhouette
+    → CSS classes: ar-product--upper-body, ar-product--lower-body, etc.
+
+  Fallback modes:
+    'fallback' — camera denied or unsupported → static guided preview
+    'loading'  — model/camera initializing → spinner
+    'ready'    — camera + (optionally) face tracking live
+
+================================================================================
+8. BACKEND INTEGRATION GUIDE
+================================================================================
+
+  Step 1: Set environment variable
+    Create frontend/.env.local:
+      VITE_API_URL=http://localhost:5000/api
+
+  Step 2: Start backend
+    cd backend && node index.js   (or: npm run dev with nodemon)
+
+  Step 3: Start frontend
+    cd frontend && npm run dev
+
+  The Vite dev proxy forwards /api/* → http://localhost:5000 automatically
+  when VITE_API_URL is NOT set (empty BASE_URL in api.js → relative URLs).
+  If VITE_API_URL is set, requests go directly to the full URL (no proxy needed).
+
+  Step 4: Backend must implement these endpoints (see Section 11).
+
+  Step 5: To build for production:
+    cd frontend && npm run build
+    → Outputs to frontend/dist/
+    → Set VITE_API_URL to your production API base URL before building
+
+================================================================================
+9. CHANGES MADE (Integration-Ready Refactor)
+================================================================================
+
+  [NEW] frontend/.env.example
+    Documents VITE_API_URL. Developers copy to .env.local.
+
+  [NEW] frontend/src/services/tokenStore.js
+    JWT stored in memory (_token var) + optional localStorage backup.
+    API: setToken(jwt), getToken(), clearToken().
+    Only imported by api.js — no component touches raw tokens.
+
+  [NEW] frontend/src/services/api.js
+    Single fetch wrapper. Auto-attaches Authorization header.
+    On 401: calls clearToken() automatically.
+    Returns { data, error } — never throws.
+    Domain groups: auth.login/register/logout/me,
+                   products.getAll/getById,
+                   cart.get/add/update/remove/clear,
+                   wishlist.get/toggle.
+
+  [MODIFIED] frontend/vite.config.js
+    Added server.proxy: { '/api': 'http://localhost:5000' }
+
+  [MODIFIED] frontend/src/utils/safeStorage.js
+    Added safeStorageClearAll(keys?) — used during logout.
+
+  [MODIFIED] frontend/src/context/AuthContext.jsx
+    - login() and register() are now async
+    - Both have IS_BACKEND_ENABLED guard → API mode or localStorage mock
+    - Exposes loading + error state
+    - logout() clears token + fitsy- localStorage keys
+    - Removed raw user registry exposure from context value (security)
+
+  [MODIFIED] frontend/src/context/StoreContext.jsx
+    - No more ByUser maps; context is user-scoped via useAuth()
+    - Exposes flat cartItems[] and wishlistItems[] arrays
+    - All mutating actions are async with optimistic updates + rollback
+    - In mock mode: reads/writes localStorage keyed by user.id (unchanged behavior)
+    - In API mode: syncs with backend on user login, calls endpoints on mutations
+
+  [NEW] frontend/src/context/ProductsContext.jsx
+    - Fetches GET /api/products on mount (if backend enabled)
+    - Falls back to static PRODUCTS array silently on error
+    - Exposes { products, categories, loading, error, getProductById }
+    - getProductById handles both numeric id (static) and _id string (MongoDB)
+
+  [NEW] frontend/src/hooks/useAsync.js
+    Generic hook: const { data, loading, error, run } = useAsync(asyncFn)
+    Reduces boilerplate for any future API-calling component.
+
+  [NEW] frontend/src/components/LoadingSpinner.jsx
+    Presentational spinner: <LoadingSpinner message="Loading..." />
+    Uses existing .spinner CSS class from index.css.
+
+  [NEW] frontend/src/components/ProtectedRoute.jsx
+    Wraps auth-required routes. Redirects to /auth with current location as state.
+    Replaces inline Navigate guards in page components.
+
+  [MODIFIED] frontend/src/App.jsx
+    - Added ProductsProvider between AuthProvider and StoreProvider
+    - /account route wrapped in <ProtectedRoute>
+    - Import of ProtectedRoute added
+
+  [MODIFIED] frontend/src/pages/AuthPage.jsx
+    - handleSubmit made async (login/register are now async)
+    - Submit button shows loading state and is disabled while pending
+
+  [MODIFIED] frontend/src/components/Navbar.jsx
+    - Destructures cartItems, wishlistItems directly (no more getCartItems(userId))
+
+  [MODIFIED] frontend/src/components/ProductCard.jsx
+    - toggleWishlist({ product }) — userId removed (context-scoped now)
+    - wishlistItems directly from useStore (no getWishlistItems call)
+
+  [MODIFIED] frontend/src/pages/ProductPage.jsx
+    - Uses useProducts() for getProductById and relatedProducts
+    - addToCart({ product, size }) — userId removed
+    - toggleWishlist({ product }) — userId removed
+    - isWishlisted checks wishlistItems array directly
+
+  [MODIFIED] frontend/src/pages/AccountPage.jsx
+    - Guard replaced by ProtectedRoute in App.jsx (component stays clean)
+    - Uses cartItems, wishlistItems directly from useStore
+    - No longer imports PRODUCTS (wishlist items carry their own display data)
+
+  [MODIFIED] frontend/src/pages/Home.jsx
+    - Imports { products, categories } from useProducts() instead of static file
+    - FEATURED_PRODUCTS, CURATED_PRODUCTS, HERO_PRODUCT derived from products[]
+
+  [MODIFIED] frontend/src/pages/Catalog.jsx
+    - Imports { products, categories } from useProducts() instead of static file
+
+================================================================================
+10. ENVIRONMENT VARIABLES
+================================================================================
+
+  Variable          Default     Description
+  ─────────────────────────────────────────────────────────────────────
+  VITE_API_URL      (empty)     Full base URL for the API, e.g.
+                                http://localhost:5000/api
+                                If empty, localhost mock mode is used AND
+                                the Vite dev proxy forwards /api/* to :5000
+
+  Set in frontend/.env.local (git-ignored). Never commit this file.
+  See frontend/.env.example for the template.
+
+================================================================================
+11. API CONTRACT EXPECTED FROM BACKEND
+================================================================================
+
+  All routes prefixed with /api (or whatever VITE_API_URL is set to).
+  All protected routes require: Authorization: Bearer <token>
+  All responses: Content-Type: application/json
+
+  ── Auth ──────────────────────────────────────────────────────────────────────
+  POST /api/auth/register
+    Body:    { name, email, password }
+    Success: 201 { token: string, user: { _id, name, email } }
+    Error:   400 { message: string }
+
+  POST /api/auth/login
+    Body:    { email, password }
+    Success: 200 { token: string, user: { _id, name, email } }
+    Error:   401 { message: string }
+
+  POST /api/auth/logout         [optional — frontend clears token regardless]
+    Success: 200 { message: 'Logged out' }
+
+  GET  /api/auth/me             [optional — for restoring session on page reload]
+    Success: 200 { user: { _id, name, email } }
+    Error:   401
+
+  ── Products ──────────────────────────────────────────────────────────────────
+  GET /api/products
+    Query params: category?, sort?, page?, limit?
+    Success: 200 { products: Product[], total: number }
+
+  GET /api/products/:id
+    Success: 200 { product: Product }
+    Error:   404 { message: string }
+
+  Product shape expected by frontend:
+    {
+      _id:         string,       // MongoDB ObjectId as string
+      name:        string,
+      price:       number,
+      rating:      number,
+      category:    string,       // must match: Clothes|Glasses|Shoes|Jewelry|Makeup|Accessories
+      vtoType:     string,       // upper-body|lower-body|shoes|jewelry|face|glasses|makeup|default
+      sizes:       string[],
+      inventory:   number,
+      description: string,
+      badge:       string,
+      accent:      string,
+      image:       string,       // URL
+      tryOn?:      { overlayKey, widthMultiplier, bridgeOffsetY }  // Glasses only
+    }
+
+  ── Cart ──────────────────────────────────────────────────────────────────────
+  GET  /api/cart                      → { items: CartItem[] }
+  POST /api/cart
+    Body:    { productId, size, quantity }
+    Success: 200 { items: CartItem[] }
+  PUT  /api/cart
+    Body:    { productId, size, quantity }
+    Success: 200 { items: CartItem[] }
+  DELETE /api/cart/:productId/:size   → { items: CartItem[] }
+  DELETE /api/cart                    → { items: [] }   (clear all)
+
+  CartItem shape: { productId, size, quantity, name, price, image }
+
+  ── Wishlist ──────────────────────────────────────────────────────────────────
+  GET  /api/wishlist                  → { items: WishlistItem[] }
+  POST /api/wishlist/toggle
+    Body:    { productId }
+    Success: 200 { items: WishlistItem[], added: boolean }
+
+  WishlistItem shape: { productId, name, price, image, category }
+
+================================================================================
+12. OPEN QUESTIONS / FUTURE WORK
+================================================================================
+
+  Q1: VTO session tracking
+    Should the AR try-on call the backend? E.g., log which products were
+    previewed, save a snapshot, count try-on events. If yes, add:
+    POST /api/vto/session { productId, timestamp }
+    And call it from AROverlay.jsx when the camera becomes 'ready'.
+
+  Q2: JWT persistence strategy
+    Current: token stored in localStorage (survives page refresh, less secure).
+    Production recommendation: httpOnly cookie set by the server (CSRF-safe).
+    Mark: tokenStore.js has a comment pointing to this upgrade path.
+
+  Q3: Products from backend or static?
+    If the backend will expose GET /api/products from MongoDB, ProductsContext
+    will use it automatically when VITE_API_URL is set.
+    If products remain static, just don't set VITE_API_URL — the static fallback
+    in ProductsContext handles it with zero code changes.
+
+  Q4: Order history
+    No order/checkout flow exists yet. When added:
+    - New route: /checkout
+    - New context or useAsync hook: OrderContext
+    - Backend: POST /api/orders, GET /api/orders (paginated)
+
+  Q5: Image hosting
+    Product images currently use Unsplash URLs. For production, store in
+    a CDN (Cloudinary, S3) and update MongoDB product documents with CDN URLs.
+
+================================================================================
