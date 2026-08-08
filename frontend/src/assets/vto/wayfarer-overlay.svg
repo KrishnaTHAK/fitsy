@@ -1,0 +1,15 @@
+<svg width="720" height="230" viewBox="0 0 720 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wayfarer-frame" x1="70" y1="30" x2="650" y2="196" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101010"/>
+      <stop offset="1" stop-color="#27272A"/>
+    </linearGradient>
+  </defs>
+  <path d="M128 96L72 80" stroke="url(#wayfarer-frame)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M592 96L648 80" stroke="url(#wayfarer-frame)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M314 104H406" stroke="url(#wayfarer-frame)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M112 74C138 54 168 46 222 46H280C320 46 332 66 332 96V118C332 156 304 186 258 186H194C150 186 124 166 116 128L108 96C106 88 108 80 112 74Z" fill="#0F172A" fill-opacity="0.32" stroke="url(#wayfarer-frame)" stroke-width="16"/>
+  <path d="M608 74C582 54 552 46 498 46H440C400 46 388 66 388 96V118C388 156 416 186 462 186H526C570 186 596 166 604 128L612 96C614 88 612 80 608 74Z" fill="#0F172A" fill-opacity="0.32" stroke="url(#wayfarer-frame)" stroke-width="16"/>
+  <path d="M154 76C182 66 214 62 286 62" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round"/>
+  <path d="M566 76C538 66 506 62 434 62" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round"/>
+</svg>

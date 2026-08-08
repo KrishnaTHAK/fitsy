@@ -1,0 +1,602 @@
+import aeroCarryBackpackImage from '../assets/products/aero-carry-backpack.jpg';
+import creamVeilConcealerImage from '../assets/products/cream-veil-concealer.jpg';
+import glassGlowHighlighterImage from '../assets/products/glass-glow-highlighter.jpg';
+import goldLayeredNecklaceImage from '../assets/products/gold-layered-necklace.jpg';
+import midnightBlackWayfarersImage from '../assets/products/midnight-black-wayfarers.jpg';
+import mochaLipSculptImage from '../assets/products/mocha-lip-sculpt.jpg';
+import wovenSummerHatImage from '../assets/products/woven-summer-hat.jpg';
+
+const CATALOG_BLUEPRINTS = [
+  {
+    category: 'Clothes',
+    vtoType: 'upper-body',
+    sizes: ['XS', 'S', 'M', 'L', 'XL'],
+    items: [
+      {
+        name: 'Contour Denim Jacket',
+        price: 92,
+        rating: 4.6,
+        accent: 'Relaxed utility fit',
+        badge: 'Best Seller',
+        image:
+          'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Studio Linen Shirt',
+        price: 68,
+        rating: 4.4,
+        accent: 'Soft summer layer',
+        badge: 'New In',
+        image:
+          'https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Contour Blazer',
+        price: 134,
+        rating: 4.7,
+        accent: 'Tailored fit',
+        badge: 'Office Edit',
+        image:
+          'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Ribbed Knit Set',
+        price: 74,
+        rating: 4.5,
+        accent: 'Textured comfort',
+        badge: 'Weekend',
+        image:
+          'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Soft Motion Dress',
+        price: 81,
+        rating: 4.3,
+        accent: 'Fluid silhouette',
+        badge: 'Summer Edit',
+        image:
+          'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Utility Cargo Jacket',
+        price: 118,
+        rating: 4.5,
+        accent: 'Structured pockets',
+        badge: 'Street Line',
+        image:
+          'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Minimal Wool Coat',
+        price: 186,
+        rating: 4.8,
+        accent: 'Cold-weather staple',
+        badge: 'Premium',
+        image:
+          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Weekend Zip Hoodie',
+        price: 59,
+        rating: 4.4,
+        accent: 'Laid-back fleece',
+        badge: 'Casual',
+        image:
+          'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Pleated Evening Top',
+        price: 71,
+        rating: 4.2,
+        accent: 'Sculpted shine',
+        badge: 'Night Edit',
+        image:
+          'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=900',
+      },
+    ],
+  },
+  {
+    category: 'Glasses',
+    vtoType: 'face',
+    sizes: ['One Size'],
+    items: [
+      {
+        name: 'Aviator Sunglasses',
+        price: 149,
+        rating: 4.8,
+        accent: 'Polarized lenses',
+        badge: 'AR Favorite',
+        tryOn: {
+          overlayKey: 'aviator',
+          widthMultiplier: 1.18,
+          bridgeOffsetY: -0.01,
+        },
+        image:
+          'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Retro Oval Frames',
+        price: 119,
+        rating: 4.6,
+        accent: 'Slim acetate',
+        badge: 'Trending',
+        tryOn: {
+          overlayKey: 'oval',
+          widthMultiplier: 1.05,
+          bridgeOffsetY: 0.005,
+        },
+        image:
+          'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Mono Shield Shades',
+        price: 164,
+        rating: 4.7,
+        accent: 'Futurist wraparound',
+        badge: 'Statement',
+        tryOn: {
+          overlayKey: 'shield',
+          widthMultiplier: 1.28,
+          bridgeOffsetY: -0.02,
+        },
+        image:
+          'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Clear Studio Frames',
+        price: 103,
+        rating: 4.4,
+        accent: 'Lightweight clarity',
+        badge: 'Everyday',
+        tryOn: {
+          overlayKey: 'clear',
+          widthMultiplier: 1.08,
+          bridgeOffsetY: 0.01,
+        },
+        image:
+          'https://images.unsplash.com/photo-1577803645773-f96470509666?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Sunset Gradient Lens',
+        price: 131,
+        rating: 4.5,
+        accent: 'Warm tint finish',
+        badge: 'Resort',
+        tryOn: {
+          overlayKey: 'aviator',
+          widthMultiplier: 1.16,
+          bridgeOffsetY: -0.01,
+        },
+        image:
+          'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Architect Square Frames',
+        price: 142,
+        rating: 4.6,
+        accent: 'Sharp silhouette',
+        badge: 'Editor Pick',
+        tryOn: {
+          overlayKey: 'square',
+          widthMultiplier: 1.1,
+          bridgeOffsetY: 0,
+        },
+        image:
+          'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Coastline Round Specs',
+        price: 108,
+        rating: 4.3,
+        accent: 'Soft circular profile',
+        badge: 'New In',
+        tryOn: {
+          overlayKey: 'round',
+          widthMultiplier: 1.07,
+          bridgeOffsetY: 0.01,
+        },
+        image:
+          'https://images.unsplash.com/photo-1567336273898-ebbf9eb3c3bf?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Midnight Black Wayfarers',
+        price: 126,
+        rating: 4.7,
+        accent: 'Timeless edge',
+        badge: 'Classic',
+        tryOn: {
+          overlayKey: 'wayfarer',
+          widthMultiplier: 1.12,
+          bridgeOffsetY: -0.005,
+        },
+        image: midnightBlackWayfarersImage,
+      },
+      {
+        name: 'Soft Rose Cat-Eye',
+        price: 138,
+        rating: 4.5,
+        accent: 'Gloss acetate',
+        badge: 'Fashion Week',
+        tryOn: {
+          overlayKey: 'catEye',
+          widthMultiplier: 1.09,
+          bridgeOffsetY: -0.005,
+        },
+        image:
+          'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&q=80&w=900',
+      },
+    ],
+  },
+  {
+    category: 'Makeup',
+    vtoType: 'face',
+    sizes: ['Standard'],
+    items: [
+      {
+        name: 'Matte Lipstick Ruby',
+        price: 24,
+        rating: 4.2,
+        accent: 'Bold finish',
+        badge: 'New Shade',
+        image:
+          'https://images.unsplash.com/photo-1586495777744-4413f21062fa?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Tinted Skin Serum',
+        price: 32,
+        rating: 4.3,
+        accent: 'Dewy coverage',
+        badge: 'Glow Boost',
+        image:
+          'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Velvet Peach Blush',
+        price: 28,
+        rating: 4.5,
+        accent: 'Soft flush tone',
+        badge: 'Daily Edit',
+        image:
+          'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Glass Glow Highlighter',
+        price: 29,
+        rating: 4.6,
+        accent: 'Reflective sheen',
+        badge: 'Trending',
+        image: glassGlowHighlighterImage,
+      },
+      {
+        name: 'Ink Line Eyeliner',
+        price: 21,
+        rating: 4.4,
+        accent: 'Sharp precision tip',
+        badge: 'Creator Pick',
+        image:
+          'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Mocha Lip Sculpt',
+        price: 26,
+        rating: 4.3,
+        accent: 'Neutral contour tone',
+        badge: 'Neutral Edit',
+        image: mochaLipSculptImage,
+      },
+      {
+        name: 'Soft Bloom Palette',
+        price: 36,
+        rating: 4.7,
+        accent: 'Six wearable shades',
+        badge: 'Top Rated',
+        image:
+          'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Cream Veil Concealer',
+        price: 27,
+        rating: 4.4,
+        accent: 'Buildable finish',
+        badge: 'Back in Stock',
+        image: creamVeilConcealerImage,
+      },
+      {
+        name: 'Rosy Satin Lip Oil',
+        price: 23,
+        rating: 4.5,
+        accent: 'Gloss with care',
+        badge: 'Fresh Drop',
+        image:
+          'https://images.unsplash.com/photo-1625772452859-1c03d5bf1137?auto=format&fit=crop&q=80&w=900',
+      },
+    ],
+  },
+  {
+    category: 'Jewelry',
+    vtoType: 'neck',
+    sizes: ['One Size'],
+    items: [
+      {
+        name: 'Gold Layered Necklace',
+        price: 45,
+        rating: 4.6,
+        accent: '18k plated',
+        badge: 'Gift Pick',
+        image: goldLayeredNecklaceImage,
+      },
+      {
+        name: 'Pearl Drop Earrings',
+        price: 39,
+        rating: 4.5,
+        accent: 'Evening polish',
+        badge: 'Event Edit',
+        image:
+          'https://images.unsplash.com/photo-1635767798638-3e25273a8236?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Sculpt Hoop Set',
+        price: 42,
+        rating: 4.4,
+        accent: 'Brushed gold finish',
+        badge: 'Everyday',
+        image:
+          'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Silver Chain Stack',
+        price: 51,
+        rating: 4.5,
+        accent: 'Layered cool tones',
+        badge: 'Street Line',
+        image:
+          'https://images.unsplash.com/photo-1619119069152-a2b331eb392a?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Satin Gem Ring',
+        price: 34,
+        rating: 4.3,
+        accent: 'Polished centerpiece',
+        badge: 'Small Luxury',
+        image:
+          'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Orbital Cuff Bracelet',
+        price: 48,
+        rating: 4.6,
+        accent: 'Minimal sculpt design',
+        badge: 'Designer Look',
+        image:
+          'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Crystal Charm Drop',
+        price: 46,
+        rating: 4.4,
+        accent: 'Light-catching detail',
+        badge: 'Occasion',
+        image:
+          'https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Fluid Loop Necklace',
+        price: 43,
+        rating: 4.2,
+        accent: 'Soft geometric form',
+        badge: 'New In',
+        image:
+          'https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Twin Pearl Choker',
+        price: 38,
+        rating: 4.5,
+        accent: 'Soft statement line',
+        badge: 'Romantic',
+        image:
+          'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?auto=format&fit=crop&q=80&w=900',
+      },
+    ],
+  },
+  {
+    category: 'Shoes',
+    vtoType: 'feet',
+    sizes: ['6', '7', '8', '9', '10', '11'],
+    items: [
+      {
+        name: 'Running Sneakers',
+        price: 120,
+        rating: 4.7,
+        accent: 'Responsive cushioning',
+        badge: 'Performance',
+        image:
+          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'City Leather Trainers',
+        price: 132,
+        rating: 4.5,
+        accent: 'Minimal leather upper',
+        badge: 'Urban',
+        image:
+          'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Marathon Knit Runner',
+        price: 126,
+        rating: 4.6,
+        accent: 'Breathable knit shell',
+        badge: 'Top Rated',
+        image:
+          'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Platform Street Sole',
+        price: 118,
+        rating: 4.4,
+        accent: 'Chunky profile',
+        badge: 'Trending',
+        image:
+          'https://images.unsplash.com/photo-1543508282-6319a3e2621f?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Soft Loop Slides',
+        price: 54,
+        rating: 4.1,
+        accent: 'Easy off-duty pair',
+        badge: 'Weekend',
+        image:
+          'https://images.unsplash.com/photo-1605733160314-4fc7dac4bb16?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Studio Court Sneakers',
+        price: 111,
+        rating: 4.3,
+        accent: 'Retro court finish',
+        badge: 'Classic',
+        image:
+          'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Velocity Track Shoes',
+        price: 139,
+        rating: 4.7,
+        accent: 'Race-ready build',
+        badge: 'Sport Lab',
+        image:
+          'https://images.unsplash.com/photo-1556048219-bb6978360b84?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Suede Slip Loafers',
+        price: 88,
+        rating: 4.2,
+        accent: 'Refined casual step',
+        badge: 'Smart Casual',
+        image:
+          'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Monochrome Foam Runners',
+        price: 96,
+        rating: 4.5,
+        accent: 'Lightweight sole',
+        badge: 'Modern',
+        image:
+          'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?auto=format&fit=crop&q=80&w=900',
+      },
+    ],
+  },
+  {
+    category: 'Accessories',
+    vtoType: 'upper-body',
+    sizes: ['One Size'],
+    items: [
+      {
+        name: 'Chrono Steel Watch',
+        price: 210,
+        rating: 4.8,
+        accent: 'Brushed steel',
+        badge: 'Premium Pick',
+        image:
+          'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Structured Crossbody Bag',
+        price: 96,
+        rating: 4.4,
+        accent: 'Daily essential',
+        badge: 'City Carry',
+        image:
+          'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Monogram Leather Tote',
+        price: 148,
+        rating: 4.7,
+        accent: 'Spacious interior',
+        badge: 'Workday',
+        image:
+          'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Canvas Weekend Duffel',
+        price: 122,
+        rating: 4.5,
+        accent: 'Travel-ready shape',
+        badge: 'Travel',
+        image:
+          'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Ribbed Beanie Cap',
+        price: 29,
+        rating: 4.2,
+        accent: 'Cold weather staple',
+        badge: 'Seasonal',
+        image:
+          'https://images.unsplash.com/photo-1514327605112-b887c0e61c0a?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Soft Leather Belt',
+        price: 41,
+        rating: 4.4,
+        accent: 'Refined buckle line',
+        badge: 'Essential',
+        image:
+          'https://images.unsplash.com/photo-1624222247344-550fb60583dc?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Fold Card Holder',
+        price: 36,
+        rating: 4.3,
+        accent: 'Slim profile',
+        badge: 'Compact',
+        image:
+          'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&q=80&w=900',
+      },
+      {
+        name: 'Aero Carry Backpack',
+        price: 138,
+        rating: 4.6,
+        accent: 'Commute utility',
+        badge: 'Tech Ready',
+        image: aeroCarryBackpackImage,
+      },
+      {
+        name: 'Woven Summer Hat',
+        price: 34,
+        rating: 4.1,
+        accent: 'Resort texture',
+        badge: 'Holiday',
+        image: wovenSummerHatImage,
+      },
+    ],
+  },
+];
+
+export const PRODUCTS = CATALOG_BLUEPRINTS.flatMap((group) =>
+  group.items.map((item, index) => ({
+    id: Number(`${CATALOG_BLUEPRINTS.indexOf(group) + 1}${index + 1}`),
+    category: group.category,
+    vtoType: group.vtoType,
+    sizes: group.sizes,
+    inventory: 7 + ((index * 5 + group.category.length) % 28),
+    description: `${item.name} brings ${item.accent.toLowerCase()} styling to the ${group.category.toLowerCase()} edit with a polished storefront-ready presentation and try-on compatibility.`,
+    ...item,
+  })),
+);
+
+export const CATEGORIES = ['All', ...CATALOG_BLUEPRINTS.map((group) => group.category)];
+
+export const NAV_ITEMS = [
+  { label: 'Home', to: '/' },
+  { label: 'New Arrivals', to: '/catalog' },
+  { label: 'Try-On Edit', to: '/catalog?category=Glasses' },
+  { label: 'Beauty', to: '/catalog?category=Makeup' },
+  { label: 'Accessories', to: '/catalog?category=Accessories' },
+];
+
+export function getProductById(id) {
+  return PRODUCTS.find((product) => product.id === Number(id));
+}

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fitsy – Weekly Project Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+      padding: 2rem 1rem;
+    }
+
+    /* ── Cover ── */
+    .cover {
+      max-width: 800px;
+      margin: 0 auto 3rem;
+      background: linear-gradient(135deg, #4A90E2 0%, #1e3a5f 100%);
+      border-radius: 24px;
+      padding: 3.5rem 2.5rem;
+      color: white;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(74,144,226,0.3);
+    }
+    .cover .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 0.3rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      margin-bottom: 1.2rem;
+    }
+    .cover h1 { font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .cover h2 { font-size: 1.2rem; font-weight: 300; opacity: 0.85; margin-bottom: 2rem; }
+    .cover .meta { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
+    .cover .meta div { background: rgba(255,255,255,0.15); border-radius: 10px; padding: 0.6rem 1.2rem; font-size: 0.9rem; }
+    .cover .meta div span { display: block; font-weight: 600; font-size: 1rem; }
+
+    /* ── Weeks Container ── */
+    .weeks { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* ── Week Card ── */
+    .week-card {
+      background: white;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border-left: 5px solid;
+    }
+    .week-card:nth-child(1) { border-color: #f59e0b; }
+    .week-card:nth-child(2) { border-color: #10b981; }
+    .week-card:nth-child(3) { border-color: #4A90E2; }
+    .week-card:nth-child(4) { border-color: #8b5cf6; }
+    .week-card:nth-child(5) { border-color: #ef4444; }
+    .week-card:nth-child(6) { border-color: #06b6d4; }
+    .week-card:nth-child(7) { border-color: #22c55e; }
+
+    .week-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.2rem 1.5rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .week-num {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.1rem; color: white;
+      flex-shrink: 0;
+    }
+    .week-card:nth-child(1) .week-num { background: #f59e0b; }
+    .week-card:nth-child(2) .week-num { background: #10b981; }
+    .week-card:nth-child(3) .week-num { background: #4A90E2; }
+    .week-card:nth-child(4) .week-num { background: #8b5cf6; }
+    .week-card:nth-child(5) .week-num { background: #ef4444; }
+    .week-card:nth-child(6) .week-num { background: #06b6d4; }
+    .week-card:nth-child(7) .week-num { background: #22c55e; }
+
+    .week-title-block { flex: 1; }
+    .week-title-block h3 { font-size: 1.05rem; font-weight: 700; }
+    .week-title-block p { font-size: 0.82rem; color: #94a3b8; margin-top: 2px; }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .done { background: #dcfce7; color: #16a34a; }
+    .in-progress { background: #fef9c3; color: #ca8a04; }
+
+    .week-body { padding: 0 1.5rem 1.5rem; display: none; }
+    .week-body.open { display: block; }
+
+    .week-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.88rem;
+    }
+    .week-body th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      background: #f8fafc;
+      color: #64748b;
+      font-weight: 600;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .week-body td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+    }
+    .week-body tr:last-child td { border-bottom: none; }
+
+    .outcome-box {
+      margin-top: 1rem;
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      font-size: 0.875rem;
+    }
+    .outcome-box strong { display: block; margin-bottom: 0.4rem; color: #4A90E2; }
+
+    .toggle-icon { font-size: 1.2rem; color: #94a3b8; transition: transform 0.25s; }
+    .week-header.open .toggle-icon { transform: rotate(180deg); }
+
+    /* ── Summary Table ── */
+    .summary-section {
+      max-width: 800px;
+      margin: 2rem auto 3rem;
+      background: white;
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .summary-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.2rem; color: #1e293b; }
+    .summary-section table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .summary-section th { background: #4A90E2; color: white; padding: 0.7rem 1rem; text-align: left; }
+    .summary-section td { padding: 0.7rem 1rem; border-bottom: 1px solid #f1f5f9; }
+    .summary-section tr:last-child td { border-bottom: none; }
+    .tag { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin: 1px; }
+  </style>
+</head>
+<body>
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="badge">ACADEMIC PROJECT REPORT</div>
+    <h1>🛍️ Fitsy</h1>
+    <h2>Virtual Try-On AR Fashion Shopping Application</h2>
+    <div class="meta">
+      <div>Duration<span>7 Weeks</span></div>
+      <div>Tech Stack<span>React + Vite</span></div>
+      <div>Status<span>In Progress</span></div>
+    </div>
+  </div>
+
+  <!-- Week Cards -->
+  <div class="weeks">
+
+    <!-- Week 1 -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggle(this)">
+        <div class="week-num">W1</div>
+        <div class="week-title-block">
+          <h3>Project Planning & Requirements</h3>
+          <p>Ideation, problem statement, and wireframes</p>
+        </div>
+        <span class="status-badge done">✓ Done</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="week-body">
+        <table>
+          <tr><th>Area</th><th>Details</th></tr>
+          <tr><td><strong>Goal</strong></td><td>Define the project idea and its purpose</td></tr>
+          <tr><td><strong>Problem Statement</strong></td><td>Online shoppers cannot try products before buying, leading to high return rates</td></tr>
+          <tr><td><strong>Solution</strong></td><td>An AR-powered web app that lets users virtually try on fashion items in real time</td></tr>
+          <tr><td><strong>Target Users</strong></td><td>Online fashion shoppers aged 16–35</td></tr>
+          <tr><td><strong>Deliverables</strong></td><td>Project proposal, wireframe sketches, feature list, and technology selection</td></tr>
+          <tr><td><strong>Tools</strong></td><td>Figma (wireframes), Google Docs (proposal)</td></tr>
+        </table>
+        <div class="outcome-box">
+          <strong>📌 Week 1 Outcome</strong>
+          Finalized project name "Fitsy", confirmed category scope (Clothes, Makeup, Jewelry, Glasses, Shoes), and created low-fidelity wireframes for Home, Catalog, and Product pages.
+        </div>
+      </div>
+    </div>
+
+    <!-- Week 2 -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggle(this)">
+        <div class="week-num">W2</div>
+        <div class="week-title-block">
+          <h3>HTML Structure & Page Layout</h3>
+          <p>Building the static skeleton of all pages</p>
+        </div>
+        <span class="status-badge done">✓ Done</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="week-body">
+        <table>
+          <tr><th>Area</th><th>Details</th></tr>
+          <tr><td><strong>Goal</strong></td><td>Create semantic HTML structure for all main pages</td></tr>
+          <tr><td><strong>Pages Built</strong></td><td>Home page, Catalog page, Product Detail page</td></tr>
+          <tr><td><strong>Elements Created</strong></td><td>Navbar, hero section, category grid, product cards, footer placeholder</td></tr>
+          <tr><td><strong>Semantic Tags Used</strong></td><td>&lt;header&gt;, &lt;nav&gt;, &lt;main&gt;, &lt;section&gt;, &lt;aside&gt;, &lt;article&gt;, &lt;footer&gt;</td></tr>
+          <tr><td><strong>Tools</strong></td><td>VS Code, Live Server extension</td></tr>
+        </table>
+        <div class="outcome-box">
+          <strong>📌 Week 2 Outcome</strong>
+          Static HTML layout created for all 3 pages. Navbar links and page structure in place. Product card layout designed with image, name, price, and category label placeholders.
+        </div>
+      </div>
+    </div>
+
+    <!-- Week 3 -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggle(this)">
+        <div class="week-num">W3</div>
+        <div class="week-title-block">
+          <h3>CSS Styling & Visual Design</h3>
+          <p>Color system, typography, and component styling</p>
+        </div>
+        <span class="status-badge done">✓ Done</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="week-body">
+        <table>
+          <tr><th>Area</th><th>Details</th></tr>
+          <tr><td><strong>Goal</strong></td><td>Apply a consistent and modern visual design across all pages</td></tr>
+          <tr><td><strong>Color Palette</strong></td><td>Primary: #4A90E2 (blue), Background: #F5F7FA, Text: #1E293B</td></tr>
+          <tr><td><strong>Typography</strong></td><td>Inter font via Google Fonts, sizes from 0.85rem to 3.5rem</td></tr>
+          <tr><td><strong>Components Styled</strong></td><td>Navbar, hero banner, product cards (with hover lift), category cards, filter sidebar</td></tr>
+          <tr><td><strong>Effects Added</strong></td><td>Box shadows, border-radius rounding, hover translateY animations</td></tr>
+          <tr><td><strong>Responsiveness</strong></td><td>CSS Grid with auto-fit / minmax for adaptive product layout</td></tr>
+        </table>
+        <div class="outcome-box">
+          <strong>📌 Week 3 Outcome</strong>
+          Full visual design applied. Hero section with gradient background, product cards with smooth hover effects, and a clean sidebar filter panel all styled and responsive.
+        </div>
+      </div>
+    </div>
+
+    <!-- Week 4 -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggle(this)">
+        <div class="week-num">W4</div>
+        <div class="week-title-block">
+          <h3>React Setup & Component Architecture</h3>
+          <p>Migrating to React + Vite, building reusable components</p>
+        </div>
+        <span class="status-badge done">✓ Done</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="week-body">
+        <table>
+          <tr><th>Area</th><th>Details</th></tr>
+          <tr><td><strong>Goal</strong></td><td>Convert the static HTML/CSS project into a React component-based app</td></tr>
+          <tr><td><strong>Setup</strong></td><td>Initialized with Vite + React template (<code>npm create vite@latest</code>)</td></tr>
+          <tr><td><strong>Packages Installed</strong></td><td>react-router-dom v6, lucide-react</td></tr>
+          <tr><td><strong>Components Created</strong></td><td>Navbar.jsx, App.jsx (router shell), main.jsx (entry point)</td></tr>
+          <tr><td><strong>Routing Added</strong></td><td>/, /catalog, /product/:id routes configured with React Router</td></tr>
+          <tr><td><strong>State Management</strong></td><td>useState for category filter, component-local state only</td></tr>
+        </table>
+        <div class="outcome-box">
+          <strong>📌 Week 4 Outcome</strong>
+          Project fully migrated to React. Navbar renders on all pages, routing between pages works correctly, and the component folder structure is established.
+        </div>
+      </div>
+    </div>
+
+    <!-- Week 5 -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggle(this)">
+        <div class="week-num">W5</div>
+        <div class="week-title-block">
+          <h3>Catalog & Product Pages</h3>
+          <p>Product data, filtering logic, and detail page</p>
+        </div>
+        <span class="status-badge done">✓ Done</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="week-body">
+        <table>
+          <tr><th>Area</th><th>Details</th></tr>
+          <tr><td><strong>Goal</strong></td><td>Build a working product catalog with filtering and individual product pages</td></tr>
+          <tr><td><strong>Products Added</strong></td><td>6 products: Denim Jacket, Aviator Sunglasses, Matte Lipstick, Gold Necklace, Running Sneakers, Floral Dress</td></tr>
+          <tr><td><strong>Filter Logic</strong></td><td>Category radio buttons filter products using useState + Array.filter()</td></tr>
+          <tr><td><strong>Product Card</strong></td><td>Shows image, category, star rating (lucide Star), name, price, and a "View" button</td></tr>
+          <tr><td><strong>Product Page</strong></td><td>Dynamic route /product/:id renders individual product details</td></tr>
+          <tr><td><strong>Images</strong></td><td>Sourced from Unsplash (free, high-quality product photos)</td></tr>
+        </table>
+        <div class="outcome-box">
+          <strong>📌 Week 5 Outcome</strong>
+          Catalog page fully functional with filter sidebar. Clicking a product navigates to its detail page. All 6 products display correctly with ratings and pricing.
+        </div>
+      </div>
+    </div>
+
+    <!-- Week 6 -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggle(this)">
+        <div class="week-num">W6</div>
+        <div class="week-title-block">
+          <h3>AR Overlay Feature</h3>
+          <p>Building the virtual try-on camera component</p>
+        </div>
+        <span class="status-badge done">✓ Done</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="week-body">
+        <table>
+          <tr><th>Area</th><th>Details</th></tr>
+          <tr><td><strong>Goal</strong></td><td>Implement the core AR try-on feature as a fullscreen overlay component</td></tr>
+          <tr><td><strong>Component</strong></td><td>AROverlay.jsx — triggered from Product Page</td></tr>
+          <tr><td><strong>Loading State</strong></td><td>Spinner animation with "Initializing AR Camera..." message (1.5s delay via useEffect)</td></tr>
+          <tr><td><strong>AR Simulation</strong></td><td>Product image overlaid on a simulated dark camera background with a dashed oval body-guide</td></tr>
+          <tr><td><strong>Controls</strong></td><td>LIVE indicator (pulsing red dot), Close (X), Share, Capture, and Fullscreen buttons</td></tr>
+          <tr><td><strong>Mini Carousel</strong></td><td>Bottom product thumbnail strip for variant switching (UI placeholder)</td></tr>
+          <tr><td><strong>Animations</strong></td><td>CSS keyframe animations: pulse (LIVE dot), spin (loader)</td></tr>
+        </table>
+        <div class="outcome-box">
+          <strong>📌 Week 6 Outcome</strong>
+          AROverlay component completed with camera loading animation, product overlay, body-guide markers, and action buttons. Integrated into Product Page with open/close toggle.
+        </div>
+      </div>
+    </div>
+
+    <!-- Week 7 -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggle(this)">
+        <div class="week-num">W7</div>
+        <div class="week-title-block">
+          <h3>Testing, Review & Future Scope</h3>
+          <p>Bug fixes, UI polish, and project documentation</p>
+        </div>
+        <span class="status-badge in-progress">⏳ In Progress</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="week-body">
+        <table>
+          <tr><th>Area</th><th>Details</th></tr>
+          <tr><td><strong>Goal</strong></td><td>Test all features, fix UI issues, and finalize documentation</td></tr>
+          <tr><td><strong>Testing Done</strong></td><td>Routing tested (all 3 routes), filter logic verified, AR overlay open/close tested</td></tr>
+          <tr><td><strong>UI Polish</strong></td><td>Hover effects, spacing consistency, mobile-friendly grid verified</td></tr>
+          <tr><td><strong>Documentation</strong></td><td>Project report written, README updated, code commented</td></tr>
+          <tr><td><strong>Pending Features</strong></td><td>Real camera (WebRTC), backend/database, cart & checkout, user login</td></tr>
+          <tr><td><strong>Future Scope</strong></td><td>TensorFlow.js face detection, Firebase backend, React Native mobile app</td></tr>
+        </table>
+        <div class="outcome-box">
+          <strong>📌 Week 7 Outcome</strong>
+          Project is functional and demo-ready. All core UI features work. Real AR integration and backend are planned for the next development phase.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /weeks -->
+
+  <!-- Summary Table -->
+  <div class="summary-section">
+    <h2>📊 Project Progress Summary</h2>
+    <table>
+      <tr>
+        <th>Week</th>
+        <th>Focus</th>
+        <th>Key Deliverable</th>
+        <th>Status</th>
+      </tr>
+      <tr><td>Week 1</td><td>Planning</td><td>Wireframes & Proposal</td><td><span class="tag done">Done</span></td></tr>
+      <tr><td>Week 2</td><td>HTML</td><td>Static Page Structure</td><td><span class="tag done">Done</span></td></tr>
+      <tr><td>Week 3</td><td>CSS</td><td>Full Visual Design</td><td><span class="tag done">Done</span></td></tr>
+      <tr><td>Week 4</td><td>React Setup</td><td>Router + Components</td><td><span class="tag done">Done</span></td></tr>
+      <tr><td>Week 5</td><td>Catalog</td><td>Product Grid + Filtering</td><td><span class="tag done">Done</span></td></tr>
+      <tr><td>Week 6</td><td>AR Feature</td><td>Try-On Overlay Component</td><td><span class="tag done">Done</span></td></tr>
+      <tr><td>Week 7</td><td>Testing & Docs</td><td>Final Report + Polishing</td><td><span class="tag in-progress">In Progress</span></td></tr>
+    </table>
+  </div>
+
+  <script>
+    function toggle(header) {
+      header.classList.toggle('open');
+      const body = header.nextElementSibling;
+      body.classList.toggle('open');
+    }
+    // Open Week 1 by default
+    document.querySelector('.week-header').click();
+  </script>
+
+</body>
+</html>

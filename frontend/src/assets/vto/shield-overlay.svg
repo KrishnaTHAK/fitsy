@@ -1,0 +1,16 @@
+<svg width="760" height="240" viewBox="0 0 760 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shield-frame" x1="60" y1="44" x2="700" y2="184" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#27272A"/>
+    </linearGradient>
+    <linearGradient id="shield-lens" x1="380" y1="56" x2="380" y2="198" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7DD3FC" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#0F172A" stop-opacity="0.56"/>
+    </linearGradient>
+  </defs>
+  <path d="M136 92L72 74" stroke="url(#shield-frame)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M624 92L688 74" stroke="url(#shield-frame)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M150 70C194 48 262 40 380 40C498 40 566 48 610 70C630 80 640 98 634 122L620 166C612 188 590 202 560 202H200C170 202 148 188 140 166L126 122C120 98 130 80 150 70Z" fill="url(#shield-lens)" stroke="url(#shield-frame)" stroke-width="18"/>
+  <path d="M176 84C230 64 306 58 380 58C454 58 530 64 584 84" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg width="720" height="260" viewBox="0 0 720 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aviator-frame" x1="64" y1="28" x2="656" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2B2B2E"/>
+      <stop offset="1" stop-color="#101013"/>
+    </linearGradient>
+    <linearGradient id="aviator-lens" x1="0" y1="52" x2="0" y2="208" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6A737F" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#111827" stop-opacity="0.58"/>
+    </linearGradient>
+  </defs>
+  <path d="M130 84L70 62" stroke="url(#aviator-frame)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M590 84L650 62" stroke="url(#aviator-frame)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M318 104H402" stroke="url(#aviator-frame)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M360 86V56" stroke="url(#aviator-frame)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M114 76C134 58 164 48 214 48H250C300 48 320 72 320 110V118C320 166 294 204 238 214H198C144 214 112 184 106 132L102 106C100 94 104 84 114 76Z" fill="url(#aviator-lens)" stroke="url(#aviator-frame)" stroke-width="16"/>
+  <path d="M606 76C586 58 556 48 506 48H470C420 48 400 72 400 110V118C400 166 426 204 482 214H522C576 214 608 184 614 132L618 106C620 94 616 84 606 76Z" fill="url(#aviator-lens)" stroke="url(#aviator-frame)" stroke-width="16"/>
+  <path d="M170 88C190 74 214 68 250 68" stroke="#F8FAFC" stroke-opacity="0.24" stroke-width="8" stroke-linecap="round"/>
+  <path d="M550 88C530 74 506 68 470 68" stroke="#F8FAFC" stroke-opacity="0.24" stroke-width="8" stroke-linecap="round"/>
+</svg>
