@@ -49,6 +49,17 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 'Cash on Delivery',
     },
+    paymentIntentId: {
+      type: String, // Stripe PaymentIntent ID for reconciliation
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'paid', 'failed', 'pending_upi'],
+      default: 'unpaid',
+    },
+    paidAt: {
+      type: Date, // Set when Stripe confirms payment via webhook
+    },
   },
   {
     timestamps: true,
