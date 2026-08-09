@@ -107,6 +107,7 @@ export function AuthProvider({ children }) {
       id: data.user._id,
       name: data.user.name,
       email: data.user.email,
+      isAdmin: data.user.isAdmin, // ADD THIS LINE
       shippingAddresses: data.user.shippingAddresses || [],
     };
     persistUserSession(sessionUser);
@@ -137,6 +138,7 @@ export function AuthProvider({ children }) {
       id: data.user._id,
       name: data.user.name,
       email: data.user.email,
+      isAdmin: data.user.isAdmin, // ADD THIS LINE
       shippingAddresses: data.user.shippingAddresses || [],
     };
     persistUserSession(sessionUser);
@@ -165,7 +167,7 @@ export function AuthProvider({ children }) {
     if (IS_BACKEND_ENABLED) {
       // Best-effort — clear local state even if the server call fails
       // Important: The server call is required to clear the httpOnly cookie
-      await api.auth.logout().catch(() => {});
+      await api.auth.logout().catch(() => { });
     }
     // Preserve theme preference; clear everything else fitsy-prefixed
     const theme = localStorage.getItem('fitsy-theme');

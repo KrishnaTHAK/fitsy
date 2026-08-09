@@ -39,11 +39,12 @@ const registerUser = async (req, res) => {
     if (user) {
       const token = generateTokenAndSetCookie(res, user._id);
       res.status(201).json({
-        token, // Optionally return the token for the frontend if needed, though cookie is set
+        token,
         user: {
           _id: user._id,
           name: user.name,
           email: user.email,
+          isAdmin: user.isAdmin,
           shippingAddresses: user.shippingAddresses || [],
         }
       });
@@ -68,11 +69,12 @@ const loginUser = async (req, res) => {
     if (user && (await user.matchPassword(password))) {
       const token = generateTokenAndSetCookie(res, user._id);
       res.json({
-        token, // Optionally return the token
+        token,
         user: {
           _id: user._id,
           name: user.name,
           email: user.email,
+          isAdmin: user.isAdmin,
           shippingAddresses: user.shippingAddresses || [],
         }
       });
@@ -109,6 +111,7 @@ const getUserProfile = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
+          isAdmin: user.isAdmin,
           shippingAddresses: user.shippingAddresses || [],
         }
       });
@@ -151,6 +154,7 @@ const updateUserAddress = async (req, res) => {
           _id: updatedUser._id,
           name: updatedUser.name,
           email: updatedUser.email,
+          isAdmin: updatedUser.isAdmin,
           shippingAddresses: updatedUser.shippingAddresses,
         }
       });

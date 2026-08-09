@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 const CATEGORY_STYLES = {
   Accessories: ['#f7efe2', '#c97b42', '#3b2216'],
   Clothes: ['#f0e9df', '#627a97', '#1f2f42'],
+  Outerwear: ['#f0e9df', '#627a97', '#1f2f42'],
+  Tops: ['#f0e9df', '#627a97', '#1f2f42'],
+  Bottoms: ['#f0e9df', '#627a97', '#1f2f42'],
+  Dresses: ['#f0e9df', '#627a97', '#1f2f42'],
   Glasses: ['#eef2f6', '#3f5268', '#0f1720'],
   Jewelry: ['#f8f0de', '#bb9250', '#50351d'],
   Makeup: ['#fff1ee', '#d96c73', '#5b2633'],

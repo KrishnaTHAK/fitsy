@@ -9,8 +9,8 @@ export default function Home() {
 
   // Derived slices — same selections as before, now from the live products array
   const featuredProducts = products.slice(0, 6);
-  const curatedProducts = products.slice(12, 16);
-  const heroProduct = products[10];
+  const curatedProducts = products.slice(6, 10);
+  const heroProduct = products[0];
 
   if (!heroProduct) return null;
 
@@ -72,7 +72,7 @@ export default function Home() {
       <section className="container marquee-band">
         <div>New season essentials</div>
         <div>Spatial try-on ready</div>
-        <div>Beauty, jewelry, eyewear, apparel</div>
+        <div>Outerwear, tops, dresses, bottoms</div>
         <div>Designed to feel like a real brand</div>
       </section>
 
@@ -119,9 +119,9 @@ export default function Home() {
           <h3>Camera-led product discovery that still feels like shopping.</h3>
           <p>
             Fitsy keeps the product-first experience while making AR a premium layer rather than a
-            gimmick. Start with face, jewelry, and eyewear items for the strongest experience.
+            gimmick. Preview fit and alignments instantly with our guided interactive overlay checks.
           </p>
-          <Link to="/catalog?category=Glasses" className="inline-link">
+          <Link to="/catalog?category=Outerwear" className="inline-link">
             Open try-on edit <Play size={14} />
           </Link>
         </div>

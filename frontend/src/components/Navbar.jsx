@@ -40,6 +40,18 @@ export default function Navbar({ theme, onToggleTheme }) {
                 {item.label}
               </NavLink>
             ))}
+
+            {/* Admin Panel Link - Renders only for Admins */}
+            {isAuthenticated && user?.isAdmin && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) => `site-nav__link ${isActive ? 'is-active' : ''}`}
+                onClick={() => setIsMenuOpen(false)}
+                style={{ color: '#ff4444', fontWeight: 'bold' }} // Optional: slight highlight for the admin link
+              >
+                Admin Panel
+              </NavLink>
+            )}
           </nav>
 
           <div className="site-actions">
