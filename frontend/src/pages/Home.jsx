@@ -11,7 +11,10 @@ export default function Home() {
   const [activeTryOnProduct, setActiveTryOnProduct] = useState(null);
 
   const featuredProducts = products.slice(0, 6);
+  const curatedProducts = products.slice(6, 10);
   const heroProduct = products[0] || products[10];
+
+  if (!heroProduct) return null;
 
   return (
     <div className="bg-surface text-on-surface flex flex-col min-h-screen">
@@ -123,6 +126,7 @@ export default function Home() {
             </button>
           </div>
 
+<<<<<<< HEAD
           <div className="relative z-10 w-full md:w-80 h-96 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 bg-slate-900 group">
             <img
               src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80"
@@ -135,6 +139,31 @@ export default function Home() {
                   AI Fit Verified
                 </span>
                 <span className="text-xs font-bold text-emerald-400">98.4% Accuracy</span>
+=======
+      <section className="container split-story section-space">
+        <div className="split-story__panel split-story__panel--dark">
+          <span className="eyebrow">Live Try-On</span>
+          <h3>Camera-led product discovery that still feels like shopping.</h3>
+          <p>
+            Fitsy keeps the product-first experience while making AR a premium layer rather than a
+            gimmick. Preview fit and alignments instantly with our guided interactive overlay checks.
+          </p>
+          <Link to="/catalog?category=Outerwear" className="inline-link">
+            Open try-on edit <Play size={14} />
+          </Link>
+        </div>
+
+        <div className="split-story__products">
+          {curatedProducts.map((product) => (
+            <Link key={product.id || product._id} to={`/product/${product.id || product._id}`} className="mini-feature">
+              <ProductImage product={product} src={product.image} alt={product.name} loading="lazy" />
+              <div>
+                <span><Sparkles size={12} /> {product.badge}</span>
+                <strong>{product.name}</strong>
+                <p>
+                  <Star size={13} fill="currentColor" /> {product.rating} rated
+                </p>
+>>>>>>> upstream/main
               </div>
               <p className="text-sm font-bold text-white">Luxe Tailored Oversized Coat</p>
             </div>

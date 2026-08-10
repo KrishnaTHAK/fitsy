@@ -15,6 +15,7 @@ import AccountPage from './pages/AccountPage';
 import CheckoutPage from './pages/CheckoutPage';
 import StaticPage from './pages/StaticPage';
 import AdminPage from './pages/AdminPage';
+import AdminDashboard from './pages/AdminDashboard';
 import { safeStorageGet, safeStorageSet } from './utils/safeStorage';
 import './index.css';
 
@@ -84,6 +85,12 @@ function App() {
                           title="Platform Policy"
                           body="Fitsy is a concept storefront. Product previews, try-on rendering, and account flows are provided for demonstration purposes and should be backed by production APIs before launch."
                         />
+                      }
+                    />
+                    <Route
+                      path="/admin-dashboard"
+                      element={
+                        <AdminDashboard />
                       }
                     />
                   </Routes>

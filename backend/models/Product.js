@@ -8,7 +8,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ['Clothes', 'Glasses', 'Shoes', 'Jewelry', 'Makeup', 'Accessories'],
+      enum: ['Outerwear', 'Tops', 'Bottoms', 'Dresses'],
     },
     vtoType: { type: String, required: true, default: 'default' },
     sizes: { type: [String], default: [] },
