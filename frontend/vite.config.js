@@ -9,7 +9,7 @@ export default defineConfig({
     // forwarded here so the Vite dev server avoids CORS issues.
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5001',
         changeOrigin: true,
       },
     },

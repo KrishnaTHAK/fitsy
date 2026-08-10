@@ -1,0 +1,23 @@
+# Master Python Requirements for Fitsy Project
+# Includes dependencies for SAM Body Segmentation, MediaPipe Pose, and Neural Virtual Try-On
+
+# Backend SAM Body Segmenter & MediaPipe Pose (fitsy/backend/utils)
+mediapipe==0.10.14
+numpy>=1.24.0,<2.0
+pillow>=10.0.0
+
+# Neural VTON Serverless Service (fitsy/vton-modal)
+modal>=0.64.0
+torch>=2.5.0
+torchvision>=0.20.0
+transformers>=4.53.0
+accelerate>=0.30.0
+safetensors>=0.4.0
+huggingface_hub>=0.25.0
+fastapi[standard]
+pydantic>=2.0
+sentencepiece
+protobuf
+peft>=0.11.0
+requests
+git+https://github.com/huggingface/diffusers.git
