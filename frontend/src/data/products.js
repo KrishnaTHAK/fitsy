@@ -1,3 +1,16 @@
+import aeroCarryBackpackImage from '../assets/products/aero-carry-backpack.jpg';
+import creamVeilConcealerImage from '../assets/products/cream-veil-concealer.jpg';
+import glassGlowHighlighterImage from '../assets/products/glass-glow-highlighter.jpg';
+import goldLayeredNecklaceImage from '../assets/products/gold-layered-necklace.jpg';
+import midnightBlackWayfarersImage from '../assets/products/midnight-black-wayfarers.jpg';
+import mochaLipSculptImage from '../assets/products/mocha-lip-sculpt.jpg';
+import wovenSummerHatImage from '../assets/products/woven-summer-hat.jpg';
+import classicWhiteTshirtImage from '../assets/products/classic-white-tshirt.png';
+import studioLinenShirtImage from '../assets/products/studio-linen-shirt.png';
+import classicBlueJeansImage from '../assets/products/classic-blue-jeans.png';
+import contourDenimJacketImage from '../assets/products/contour-denim-jacket.png';
+import minimalWoolCoatImage from '../assets/products/minimal-wool-coat.png';
+import silkMidiDressImage from '../assets/products/silk-midi-dress.png';
 const CATALOG_BLUEPRINTS = [
   {
     category: 'Outerwear',
@@ -5,40 +18,52 @@ const CATALOG_BLUEPRINTS = [
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
     items: [
       {
-        name: 'Contour Denim Jacket',
-        price: 92,
-        rating: 4.6,
-        accent: 'Relaxed utility fit',
+        name: 'Classic Minimal White T-Shirt',
+        price: 45,
+        rating: 4.9,
+        accent: 'Premium 100% cotton crewneck',
         badge: 'Best Seller',
-        image:
-          'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=900',
+        image: classicWhiteTshirtImage,
       },
       {
-        name: 'Contour Blazer',
-        price: 134,
-        rating: 4.7,
-        accent: 'Tailored fit',
-        badge: 'Office Edit',
-        image:
-          'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=80&w=900',
-      },
-      {
-        name: 'Utility Cargo Jacket',
-        price: 118,
-        rating: 4.5,
-        accent: 'Structured pockets',
-        badge: 'Street Line',
-        image:
-          'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=900',
-      },
-      {
-        name: 'Minimal Wool Coat',
-        price: 186,
+        name: 'Studio Linen Button Shirt',
+        price: 68,
         rating: 4.8,
-        accent: 'Cold-weather staple',
+        accent: 'Soft organic summer layer',
+        badge: 'New In',
+        image: studioLinenShirtImage,
+      },
+      {
+        name: 'Classic Indigo Denim Jeans',
+        price: 110,
+        rating: 4.8,
+        accent: 'Vintage straight fit',
+        badge: 'Essential',
+        image: classicBlueJeansImage,
+      },
+      {
+        name: 'Contour Denim Trucker Jacket',
+        price: 92,
+        rating: 4.7,
+        accent: 'Structured utility fit',
+        badge: 'Best Seller',
+        image: contourDenimJacketImage,
+      },
+      {
+        name: 'Minimal Charcoal Wool Coat',
+        price: 186,
+        rating: 4.9,
+        accent: 'Cold-weather staple drape',
         badge: 'Premium',
-        image:
-          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=900',
+        image: minimalWoolCoatImage,
+      },
+      {
+        name: 'Emerald Silk Bias-Cut Midi Dress',
+        price: 145,
+        rating: 4.9,
+        accent: 'Fluid luxury drape',
+        badge: 'Evening Edit',
+        image: silkMidiDressImage,
       },
       {
         name: 'Oversized Wool Coat',
@@ -80,8 +105,7 @@ const CATALOG_BLUEPRINTS = [
         rating: 4.4,
         accent: 'Laid-back fleece',
         badge: 'Casual',
-        image:
-          'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&q=80&w=900',
+        image: classicWhiteTshirtImage,
       },
       {
         name: 'Pleated Evening Top',
@@ -89,8 +113,7 @@ const CATALOG_BLUEPRINTS = [
         rating: 4.2,
         accent: 'Sculpted shine',
         badge: 'Night Edit',
-        image:
-          'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=900',
+        image: studioLinenShirtImage,
       },
       {
         name: 'Cashmere Ribbed Knit Sweater',

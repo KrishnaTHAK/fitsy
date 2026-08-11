@@ -1,0 +1,19 @@
+# Fitsy VTON Modal Microservice - Python Dependencies
+# FLUX.2 Klein 9B + Virtual Try-On LoRA
+
+modal>=0.64.0
+torch>=2.5.0
+torchvision>=0.20.0
+transformers>=4.53.0
+accelerate>=0.30.0
+safetensors>=0.4.0
+pillow>=10.0.0
+numpy>=1.24.0,<2.0
+huggingface_hub>=0.25.0
+fastapi[standard]
+pydantic>=2.0
+sentencepiece
+protobuf
+peft>=0.11.0
+requests
+git+https://github.com/huggingface/diffusers.git

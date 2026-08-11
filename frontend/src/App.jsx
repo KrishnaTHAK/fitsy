@@ -14,6 +14,7 @@ import AuthPage from './pages/AuthPage';
 import AccountPage from './pages/AccountPage';
 import CheckoutPage from './pages/CheckoutPage';
 import StaticPage from './pages/StaticPage';
+import AdminPage from './pages/AdminPage';
 import AdminDashboard from './pages/AdminDashboard';
 import { safeStorageGet, safeStorageSet } from './utils/safeStorage';
 import './index.css';
@@ -38,18 +39,19 @@ function App() {
         <ProductsProvider>
           <StoreProvider>
             <Router>
-              <div className="app-shell">
+              <div className="app-shell flex flex-col min-h-screen">
                 <Navbar
                   theme={theme}
                   onToggleTheme={() =>
                     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
                   }
                 />
-                <main className="page-shell">
+                <main className="page-shell flex-1">
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/catalog" element={<Catalog />} />
                     <Route path="/product/:id" element={<ProductPage />} />
+                    <Route path="/admin" element={<AdminPage />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route
                       path="/account"
@@ -86,7 +88,7 @@ function App() {
                       }
                     />
                     <Route
-                      path="/admin"
+                      path="/admin-dashboard"
                       element={
                         <AdminDashboard />
                       }

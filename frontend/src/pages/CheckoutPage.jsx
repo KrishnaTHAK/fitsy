@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, MapPin, CheckCircle, Package, Plus, Edit3, Smartphone, Truck } from 'lucide-react';
+import { ArrowLeft, CreditCard, MapPin, CheckCircle, Package, Plus, Edit3, Smartphone, Truck, ShieldCheck, Sparkles, Trash2, ShoppingBag } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { useStore } from '../context/StoreContext';
@@ -8,22 +8,20 @@ import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 import StripePaymentForm from '../components/StripePaymentForm';
 
-// Load Stripe outside component to avoid recreating on every render
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { cartItems, clearCartLocal } = useStore();
+  const { cartItems, removeFromCart, updateCartQuantity, clearCartLocal } = useStore();
   const { user, updateAddress } = useAuth();
 
   const savedAddresses = user?.shippingAddresses || [];
 
-  // --- Step Management ---
-  // 1 = Shipping Address, 2 = Order Review & Payment
   const [checkoutStep, setCheckoutStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
+  const [promoCode, setPromoCode] = useState('');
+  const [discount, setDiscount] = useState(0);
 
-  // --- State: Address ---
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(
     savedAddresses.length > 0 ? 0 : null
   );
@@ -38,20 +36,19 @@ export default function CheckoutPage() {
     phoneNumber: '',
   });
 
-  // --- State: UI feedback ---
   const [saveLoading, setSaveLoading] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-
-  // --- State: Stripe ---
   const [clientSecret, setClientSecret] = useState(null);
   const [stripeOrderId, setStripeOrderId] = useState(null);
 
-  const totalPrice = useMemo(
+  const subtotal = useMemo(
     () => cartItems.reduce((total, item) => total + item.price * item.quantity, 0),
     [cartItems]
   );
+  const shippingFee = subtotal > 120 ? 0 : 15;
+  const grandTotal = Math.max(0, subtotal + shippingFee - discount);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

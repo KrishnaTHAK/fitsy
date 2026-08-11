@@ -1,0 +1,5 @@
+# Python deps for samSegmenter.py (pose + person segmentation).
+# MediaPipe wheels need Python 3.10–3.12; numpy pinned <2 for mediapipe compat.
+mediapipe==0.10.14
+numpy<2
+pillow
