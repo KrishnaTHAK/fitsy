@@ -44,11 +44,12 @@ export default function CheckoutPage() {
   const [stripeOrderId, setStripeOrderId] = useState(null);
 
   const subtotal = useMemo(
-    () => cartItems.reduce((total, item) => total + item.price * item.quantity, 0),
+    () => (cartItems || []).reduce((total, item) => total + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0),
     [cartItems]
   );
   const shippingFee = subtotal > 120 ? 0 : 15;
   const grandTotal = Math.max(0, subtotal + shippingFee - discount);
+  const totalPrice = grandTotal;
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -403,8 +404,8 @@ export default function CheckoutPage() {
                           <span style={{ fontSize: '0.9rem', color: 'var(--ink-soft)' }}>Size: {item.size} | Qty: {item.quantity}</span>
                         </div>
                         <div style={{ textAlign: 'right', display: 'grid', gap: '4px' }}>
-                          <strong style={{ fontSize: '1.1rem' }}>${(item.price * item.quantity).toFixed(2)}</strong>
-                          {item.quantity > 1 && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>${item.price.toFixed(2)} each</span>}
+                          <strong style={{ fontSize: '1.1rem' }}>${((Number(item.price) || 0) * (Number(item.quantity) || 1)).toFixed(2)}</strong>
+                          {item.quantity > 1 && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>${(Number(item.price) || 0).toFixed(2)} each</span>}
                         </div>
                       </div>
                     ))}
@@ -422,8 +423,8 @@ export default function CheckoutPage() {
 
             <div style={{ display: 'grid', gap: '0.8rem', fontSize: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--ink-soft)' }}>Subtotal ({cartItems.reduce((acc, item) => acc + item.quantity, 0)} items)</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span style={{ color: 'var(--ink-soft)' }}>Subtotal ({(cartItems || []).reduce((acc, item) => acc + (Number(item.quantity) || 1), 0)} items)</span>
+                <span>${(Number(totalPrice) || 0).toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--ink-soft)' }}>Shipping</span>
@@ -437,7 +438,7 @@ export default function CheckoutPage() {
 
             <div style={{ borderTop: '1px solid var(--line)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', fontSize: '1.4rem', fontWeight: 'bold' }}>
               <span>Grand Total</span>
-              <span style={{ color: 'var(--accent)' }}>${totalPrice.toFixed(2)}</span>
+              <span style={{ color: 'var(--accent)' }}>${(Number(totalPrice) || 0).toFixed(2)}</span>
             </div>
 
             {/* Payment Method Selector — shown only on Step 2 */}

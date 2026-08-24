@@ -13,6 +13,8 @@ import Catalog from './pages/Catalog';
 import ProductPage from './pages/ProductPage';
 import AuthPage from './pages/AuthPage';
 import AccountPage from './pages/AccountPage';
+import WishlistPage from './pages/WishlistPage';
+import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import StaticPage from './pages/StaticPage';
 import AdminPage from './pages/AdminPage';
@@ -61,6 +63,8 @@ function App() {
                       }
                     />
                     <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/wishlist" element={<WishlistPage />} />
+                    <Route path="/cart" element={<CartPage />} />
                     <Route
                       path="/account"
                       element={

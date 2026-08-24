@@ -4,26 +4,7 @@ import { useAuth } from './AuthContext';
 import { safeReadJson, safeWriteJson } from '../utils/safeStorage';
 
 // ─── StoreContext ─────────────────────────────────────────────────────────────
-// Manages cart and wishlist for the logged-in user.
-//
-// Key design decisions:
-//
-//  1. User-scoped automatically — no more userId parameter on every call.
-//     The context reads useAuth() and clears data on logout.
-//
-//  2. Flat arrays — cartItems[] and wishlistItems[] instead of ByUser maps.
-//     This matches what the backend returns and is simpler to consume.
-//
-//  3. Dual-mode (same IS_BACKEND_ENABLED flag as AuthContext):
-//     - Mock mode → reads/writes localStorage keyed by user.id (same behavior
-//       as before, just now without userId in the public API).
-//     - API mode → seeds from server on login, optimistic updates on mutation.
-//
-//  4. Optimistic updates → mutation applied locally first, then API call.
-//     On error: previous state is restored (rollback).
-//
-// Cart item shape:    { productId, size, quantity, name, price, image }
-// Wishlist item shape:{ productId, name, price, image, category }
+// Manages cart and wishlist for the logged-in user with dual API + Local persistence.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const StoreContext = createContext(null);
@@ -31,131 +12,213 @@ const CART_STORAGE_KEY = 'fitsy-store-cart';
 const WISHLIST_STORAGE_KEY = 'fitsy-store-wishlist';
 const IS_BACKEND_ENABLED = Boolean(import.meta.env.VITE_API_URL);
 
+export const DEFAULT_DEMO_CART = [
+  {
+    productId: 'demo_cart_1',
+    name: 'Midnight Tailored Blazer',
+    price: 450.0,
+    size: '40R',
+    color: 'Midnight Blue',
+    quantity: 1,
+    image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&q=80&w=900',
+    tryOnFit: true,
+  },
+  {
+    productId: 'demo_cart_2',
+    name: 'Aero Leather Sneakers',
+    price: 220.0,
+    size: '10',
+    color: 'Pure White',
+    quantity: 1,
+    image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=900',
+    tryOnFit: true,
+  },
+];
+
+export const DEFAULT_DEMO_WISHLIST = [
+  {
+    productId: 'demo_wish_1',
+    name: 'Obsidian Tote',
+    price: 895,
+    description: 'Structured calfskin leather',
+    category: 'Accessories',
+    image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=900',
+    vtoType: 'accessories',
+  },
+  {
+    productId: 'demo_wish_2',
+    name: 'Silk Trench',
+    price: 1250,
+    description: 'Champagne tailored fit',
+    category: 'Outerwear',
+    image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=900',
+    vtoType: 'upper-body',
+  },
+  {
+    productId: 'demo_wish_3',
+    name: 'Aero Shades',
+    price: 340,
+    description: 'Titanium frame, polarized',
+    category: 'Accessories',
+    image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=900',
+    vtoType: 'accessories',
+  },
+];
+
 export function StoreProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
-  const [cartItems, setCartItems] = useState([]);
-  const [wishlistItems, setWishlistItems] = useState([]);
+  const [cartItems, setCartItems] = useState(DEFAULT_DEMO_CART);
+  const [wishlistItems, setWishlistItems] = useState(DEFAULT_DEMO_WISHLIST);
   const [cartLoading, setCartLoading] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // ─── Seed data when auth state changes ────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || !user) {
-      setCartItems([]);
-      setWishlistItems([]);
+      // Keep demo defaults accessible for unauthenticated preview
+      const localCart = safeReadJson(CART_STORAGE_KEY, {});
+      const localWish = safeReadJson(WISHLIST_STORAGE_KEY, {});
+      setCartItems(localCart['guest'] || DEFAULT_DEMO_CART);
+      setWishlistItems(localWish['guest'] || DEFAULT_DEMO_WISHLIST);
       return;
     }
 
-    if (!IS_BACKEND_ENABLED) {
-      // Mock mode: read from localStorage (keyed by user.id for multi-account)
-      const allCart = safeReadJson(CART_STORAGE_KEY, {});
-      const allWishlist = safeReadJson(WISHLIST_STORAGE_KEY, {});
-      setCartItems(allCart[user.id] || []);
-      setWishlistItems(allWishlist[user.id] || []);
-      return;
+    // Mock mode: read from localStorage (keyed by user.id for multi-account)
+    const allCart = safeReadJson(CART_STORAGE_KEY, {});
+    const allWishlist = safeReadJson(WISHLIST_STORAGE_KEY, {});
+
+    if (allCart[user.id]) {
+      setCartItems(allCart[user.id]);
+    } else {
+      setCartItems(DEFAULT_DEMO_CART);
+      persistCartLocal(DEFAULT_DEMO_CART);
     }
 
-    // API mode: fetch from server
-    let isMounted = true;
-    (async () => {
-      setCartLoading(true);
-      setWishlistLoading(true);
-      const [cartRes, wishlistRes] = await Promise.all([api.cart.get(), api.wishlist.get()]);
-      if (!isMounted) return;
-      if (!cartRes.error) setCartItems(cartRes.data?.items || []);
-      if (!wishlistRes.error) setWishlistItems(wishlistRes.data?.items || []);
-      setCartLoading(false);
-      setWishlistLoading(false);
-    })();
+    if (allWishlist[user.id]) {
+      setWishlistItems(allWishlist[user.id]);
+    } else {
+      setWishlistItems(DEFAULT_DEMO_WISHLIST);
+      persistWishlistLocal(DEFAULT_DEMO_WISHLIST);
+    }
 
-    return () => {
-      isMounted = false;
-    };
+    // API mode: sync from server in background if reachable
+    if (IS_BACKEND_ENABLED) {
+      let isMounted = true;
+      (async () => {
+        setCartLoading(true);
+        setWishlistLoading(true);
+        try {
+          const [cartRes, wishlistRes] = await Promise.all([api.cart.get(), api.wishlist.get()]);
+          if (!isMounted) return;
+          if (!cartRes.error && Array.isArray(cartRes.data?.items) && cartRes.data.items.length > 0) {
+            setCartItems(cartRes.data.items);
+          }
+          if (!wishlistRes.error && Array.isArray(wishlistRes.data?.items) && wishlistRes.data.items.length > 0) {
+            setWishlistItems(wishlistRes.data.items);
+          }
+        } catch {
+          // Silent fallback to memory/localStorage
+        } finally {
+          if (isMounted) {
+            setCartLoading(false);
+            setWishlistLoading(false);
+          }
+        }
+      })();
+
+      return () => {
+        isMounted = false;
+      };
+    }
   }, [isAuthenticated, user?.id]);
 
-  // ─── Local persistence helpers (mock mode only) ────────────────────────────
+  // ─── Local persistence helpers ────────────────────────────────────────────
   function persistCartLocal(nextItems) {
-    if (!user || IS_BACKEND_ENABLED) return;
+    const key = user?.id || 'guest';
     const all = safeReadJson(CART_STORAGE_KEY, {});
-    safeWriteJson(CART_STORAGE_KEY, { ...all, [user.id]: nextItems });
+    safeWriteJson(CART_STORAGE_KEY, { ...all, [key]: nextItems });
   }
 
   function persistWishlistLocal(nextItems) {
-    if (!user || IS_BACKEND_ENABLED) return;
+    const key = user?.id || 'guest';
     const all = safeReadJson(WISHLIST_STORAGE_KEY, {});
-    safeWriteJson(WISHLIST_STORAGE_KEY, { ...all, [user.id]: nextItems });
+    safeWriteJson(WISHLIST_STORAGE_KEY, { ...all, [key]: nextItems });
   }
 
   // ─── Cart actions ──────────────────────────────────────────────────────────
-  async function addToCart({ product, size }) {
-    const productId = product.id || product._id;
+  async function addToCart({ product, size = 'M', color = 'Default', quantity = 1 }) {
+    const productId = product.id || product._id || product.productId;
     const prevItems = cartItems;
-    const existing = cartItems.find((i) => i.productId === productId && i.size === size);
+    const existing = cartItems.find((i) => (i.productId === productId || i.id === productId) && i.size === size);
 
     const nextItems = existing
       ? cartItems.map((i) =>
-          i.productId === productId && i.size === size
-            ? { ...i, quantity: i.quantity + 1 }
-            : i,
+          (i.productId === productId || i.id === productId) && i.size === size
+            ? { ...i, quantity: i.quantity + quantity }
+            : i
         )
       : [
           ...cartItems,
           {
-            productId: productId,
-            size,
-            quantity: 1,
+            productId,
             name: product.name,
-            price: product.price,
+            price: Number(product.price),
             image: product.image,
+            size,
+            color: product.accent || color,
+            quantity,
+            tryOnFit: Boolean(product.vtoType || product.tryOn),
           },
         ];
 
-    // Optimistic update
     setCartItems(nextItems);
     persistCartLocal(nextItems);
 
     if (IS_BACKEND_ENABLED) {
-      const { error } = await api.cart.add(productId, size);
-      if (error) {
-        setCartItems(prevItems); // rollback
-        persistCartLocal(prevItems);
+      try {
+        await api.cart.add(productId, size, quantity);
+      } catch {
+        // Optimistic keep
       }
     }
   }
 
-  async function removeFromCart({ productId, size }) {
+  async function removeFromCart(productId, size) {
     const prevItems = cartItems;
-    const nextItems = cartItems.filter((i) => !(i.productId === productId && i.size === size));
-
-    setCartItems(nextItems);
-    persistCartLocal(nextItems);
-
-    if (IS_BACKEND_ENABLED) {
-      const { error } = await api.cart.remove(productId, size);
-      if (error) {
-        setCartItems(prevItems);
-        persistCartLocal(prevItems);
-      }
-    }
-  }
-
-  async function updateCartQuantity({ productId, size, quantity }) {
-    if (quantity <= 0) {
-      await removeFromCart({ productId, size });
-      return;
-    }
-
-    const prevItems = cartItems;
-    const nextItems = cartItems.map((i) =>
-      i.productId === productId && i.size === size ? { ...i, quantity } : i
+    const nextItems = cartItems.filter(
+      (i) => !((i.productId === productId || i.id === productId || String(i._id) === String(productId)) && (size ? i.size === size : true))
     );
 
     setCartItems(nextItems);
     persistCartLocal(nextItems);
 
     if (IS_BACKEND_ENABLED) {
-      const { error } = await api.cart.update(productId, size, quantity);
-      if (error) {
+      try {
+        await api.cart.remove(productId, size);
+      } catch {
+        setCartItems(prevItems);
+        persistCartLocal(prevItems);
+      }
+    }
+  }
+
+  async function updateCartQuantity(productId, size, quantity) {
+    if (quantity <= 0) {
+      return removeFromCart(productId, size);
+    }
+
+    const prevItems = cartItems;
+    const nextItems = cartItems.map((i) =>
+      (i.productId === productId || i.id === productId) && i.size === size ? { ...i, quantity } : i
+    );
+
+    setCartItems(nextItems);
+    persistCartLocal(nextItems);
+
+    if (IS_BACKEND_ENABLED) {
+      try {
+        await api.cart.update(productId, size, quantity);
+      } catch {
         setCartItems(prevItems);
         persistCartLocal(prevItems);
       }
@@ -165,29 +228,30 @@ export function StoreProvider({ children }) {
   async function clearCartLocal() {
     setCartItems([]);
     persistCartLocal([]);
-    // Issue 2 fix: also clear on the backend so the cart doesn't
-    // reappear on page refresh (backend is the source of truth in API mode)
     if (IS_BACKEND_ENABLED) {
-      await api.cart.clear();
+      try {
+        await api.cart.clear();
+      } catch {}
     }
   }
 
   // ─── Wishlist actions ──────────────────────────────────────────────────────
   async function toggleWishlist({ product }) {
-    const productId = product.id || product._id;
-    const prevItems = wishlistItems;
-    const exists = wishlistItems.some((i) => i.productId === productId);
+    const productId = product.id || product._id || product.productId;
+    const exists = wishlistItems.some((i) => i.productId === productId || i.id === productId);
 
     const nextItems = exists
-      ? wishlistItems.filter((i) => i.productId !== productId)
+      ? wishlistItems.filter((i) => i.productId !== productId && i.id !== productId)
       : [
           ...wishlistItems,
           {
-            productId: productId,
+            productId,
             name: product.name,
-            price: product.price,
+            price: Number(product.price),
             image: product.image,
-            category: product.category,
+            category: product.category || 'Apparel',
+            description: product.description || product.accent || 'Curated designer selection',
+            vtoType: product.vtoType || 'upper-body',
           },
         ];
 
@@ -195,13 +259,33 @@ export function StoreProvider({ children }) {
     persistWishlistLocal(nextItems);
 
     if (IS_BACKEND_ENABLED) {
-      const { error } = await api.wishlist.toggle(productId);
-      if (error) {
-        setWishlistItems(prevItems);
-        persistWishlistLocal(prevItems);
-      }
+      try {
+        await api.wishlist.toggle(productId);
+      } catch {}
     }
   }
+
+  function isInWishlist(productId) {
+    return wishlistItems.some((i) => i.productId === productId || i.id === productId);
+  }
+
+  async function clearWishlist() {
+    setWishlistItems([]);
+    persistWishlistLocal([]);
+  }
+
+  // ─── Computed Totals ───────────────────────────────────────────────────────
+  const subtotal = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+  }, [cartItems]);
+
+  const estimatedTax = useMemo(() => {
+    return +(subtotal * 0.08).toFixed(2);
+  }, [subtotal]);
+
+  const total = useMemo(() => {
+    return +(subtotal + estimatedTax).toFixed(2);
+  }, [subtotal, estimatedTax]);
 
   const value = useMemo(
     () => ({
@@ -209,14 +293,20 @@ export function StoreProvider({ children }) {
       wishlistItems,
       cartLoading,
       wishlistLoading,
+      subtotal,
+      estimatedTax,
+      total,
       addToCart,
       removeFromCart,
       updateCartQuantity,
+      clearCart: clearCartLocal,
       clearCartLocal,
       toggleWishlist,
+      isInWishlist,
+      clearWishlist,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cartItems, wishlistItems, cartLoading, wishlistLoading],
+    [cartItems, wishlistItems, cartLoading, wishlistLoading, subtotal, estimatedTax, total],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
