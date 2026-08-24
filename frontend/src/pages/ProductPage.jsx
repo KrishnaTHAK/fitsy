@@ -6,6 +6,10 @@ import { useAuth } from '../context/AuthContext';
 import { useProducts } from '../context/ProductsContext';
 import { useStore } from '../context/StoreContext';
 
+// Normalize IDs to strings for reliable === comparisons.
+// Static catalog uses numeric ids; backend returns MongoDB ObjectId strings.
+const toStr = (v) => String(v ?? '');
+
 const FABRIC_SPECS = [
   { label: 'Material', value: '100% Organic Heavyweight Cotton' },
   { label: 'Fit Type', value: 'Relaxed / Oversized Drop Shoulder' },
@@ -35,19 +39,21 @@ export default function ProductPage() {
     }
   }, [product]);
 
+  const productId = toStr(product?.id || product?._id);
+
   const currentCartItem = useMemo(
-    () => cartItems.find((item) => item.productId === (product?.id || product?._id) && item.size === selectedSize),
-    [cartItems, product, selectedSize]
+    () => cartItems.find((item) => toStr(item.productId) === productId && item.size === selectedSize),
+    [cartItems, productId, selectedSize],
   );
   const currentQuantity = currentCartItem ? currentCartItem.quantity : 0;
 
   const isWishlisted = isAuthenticated
-    ? wishlistItems.some((item) => item.productId === (product?.id || product?._id))
+    ? wishlistItems.some((item) => toStr(item.productId) === productId)
     : false;
 
   const relatedProducts = useMemo(
-    () => products.filter((item) => item.category === product?.category && (item.id || item._id) !== (product?.id || product?._id)).slice(0, 3),
-    [products, product?.category, product?.id, product?._id]
+    () => products.filter((item) => item.category === product?.category && toStr(item.id || item._id) !== productId).slice(0, 3),
+    [products, product?.category, productId],
   );
 
   if (!product) return null;
@@ -150,11 +156,10 @@ export default function ProductPage() {
                       <button
                         key={color}
                         onClick={() => setSelectedColor(color)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                          selectedColor === color
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${selectedColor === color
                             ? 'bg-primary text-white border-primary shadow-sm'
                             : 'bg-surface border-outline-variant/60 text-on-surface hover:border-primary'
-                        }`}
+                          }`}
                       >
                         {color}
                       </button>
@@ -182,11 +187,10 @@ export default function ProductPage() {
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`py-3 rounded-xl text-sm font-bold border transition-all cursor-pointer ${
-                        selectedSize === size
+                      className={`py-3 rounded-xl text-sm font-bold border transition-all cursor-pointer ${selectedSize === size
                           ? 'bg-primary text-white border-primary shadow-md'
                           : 'bg-surface border-outline-variant/60 text-on-surface hover:border-primary'
-                      }`}
+                        }`}
                     >
                       {size}
                     </button>
@@ -211,14 +215,14 @@ export default function ProductPage() {
                     <span>In Shopping Bag</span>
                     <div className="flex items-center gap-4">
                       <button
-                        onClick={() => updateCartQuantity({ productId: product.id || product._id, size: selectedSize, quantity: currentQuantity - 1 })}
+                        onClick={() => updateCartQuantity({ productId, size: selectedSize, quantity: currentQuantity - 1 })}
                         className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg cursor-pointer"
                       >
                         -
                       </button>
                       <span>{currentQuantity}</span>
                       <button
-                        onClick={() => updateCartQuantity({ productId: product.id || product._id, size: selectedSize, quantity: currentQuantity + 1 })}
+                        onClick={() => updateCartQuantity({ productId, size: selectedSize, quantity: currentQuantity + 1 })}
                         className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg cursor-pointer"
                       >
                         +
@@ -237,11 +241,10 @@ export default function ProductPage() {
                 {/* Wishlist Button */}
                 <button
                   onClick={handleToggleWishlist}
-                  className={`w-full py-3 rounded-full border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                    isWishlisted
+                  className={`w-full py-3 rounded-full border text-xs font-bold transition-all flex items-center justify-center gap-2 ${isWishlisted
                       ? 'bg-rose-500/10 border-rose-500 text-rose-500'
                       : 'border-outline-variant/60 text-on-surface-variant hover:border-primary'
-                  }`}
+                    }`}
                 >
                   <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
                   {isWishlisted ? 'Saved to Wishlist' : 'Save to Wishlist'}
@@ -278,17 +281,15 @@ export default function ProductPage() {
           <div className="flex border-b border-outline-variant/30 gap-8">
             <button
               onClick={() => setActiveTab('description')}
-              className={`pb-3 text-sm font-bold border-b-2 transition-all ${
-                activeTab === 'description' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
-              }`}
+              className={`pb-3 text-sm font-bold border-b-2 transition-all ${activeTab === 'description' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
+                }`}
             >
               Fabric &amp; Care Details
             </button>
             <button
               onClick={() => setActiveTab('shipping')}
-              className={`pb-3 text-sm font-bold border-b-2 transition-all ${
-                activeTab === 'shipping' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
-              }`}
+              className={`pb-3 text-sm font-bold border-b-2 transition-all ${activeTab === 'shipping' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
+                }`}
             >
               Shipping &amp; Returns
             </button>

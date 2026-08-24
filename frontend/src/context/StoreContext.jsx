@@ -17,10 +17,12 @@ import { safeReadJson, safeWriteJson } from '../utils/safeStorage';
 //  3. Dual-mode (same IS_BACKEND_ENABLED flag as AuthContext):
 //     - Mock mode → reads/writes localStorage keyed by user.id (same behavior
 //       as before, just now without userId in the public API).
-//     - API mode → seeds from server on login, optimistic updates on mutation.
+//     - API mode → seeds from server on login, optimistic updates on mutation,
+//       then reconciles with server response to stay in sync.
 //
-//  4. Optimistic updates → mutation applied locally first, then API call.
-//     On error: previous state is restored (rollback).
+//  4. After each successful backend mutation the context adopts the server's
+//     authoritative items array (not the local optimistic value). This prevents
+//     quantity drift / doubling on page refresh.
 //
 // Cart item shape:    { productId, size, quantity, name, price, image }
 // Wishlist item shape:{ productId, name, price, image, category }
@@ -31,12 +33,19 @@ const CART_STORAGE_KEY = 'fitsy-store-cart';
 const WISHLIST_STORAGE_KEY = 'fitsy-store-wishlist';
 const IS_BACKEND_ENABLED = Boolean(import.meta.env.VITE_API_URL);
 
+// Coerce any productId value (ObjectId string, number, etc.) to a plain string
+// so that === comparisons are reliable across static catalog (numeric ids) and
+// backend responses (MongoDB ObjectId strings).
+const toStr = (v) => String(v ?? '');
+
 export function StoreProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [wishlistItems, setWishlistItems] = useState([]);
   const [cartLoading, setCartLoading] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [cartError, setCartError] = useState(null);
+  const [wishlistError, setWishlistError] = useState(null);
 
   // ─── Seed data when auth state changes ────────────────────────────────────
   useEffect(() => {
@@ -88,53 +97,70 @@ export function StoreProvider({ children }) {
 
   // ─── Cart actions ──────────────────────────────────────────────────────────
   async function addToCart({ product, size }) {
-    const productId = product.id || product._id;
+    const productId = toStr(product.id || product._id);
     const prevItems = cartItems;
-    const existing = cartItems.find((i) => i.productId === productId && i.size === size);
+    setCartError(null);
+
+    // Build optimistic next state
+    const existing = cartItems.find(
+      (i) => toStr(i.productId) === productId && i.size === size,
+    );
 
     const nextItems = existing
       ? cartItems.map((i) =>
-          i.productId === productId && i.size === size
-            ? { ...i, quantity: i.quantity + 1 }
-            : i,
-        )
+        toStr(i.productId) === productId && i.size === size
+          ? { ...i, quantity: i.quantity + 1 }
+          : i,
+      )
       : [
-          ...cartItems,
-          {
-            productId: productId,
-            size,
-            quantity: 1,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-          },
-        ];
+        ...cartItems,
+        {
+          productId,
+          size,
+          quantity: 1,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+        },
+      ];
 
     // Optimistic update
     setCartItems(nextItems);
     persistCartLocal(nextItems);
 
     if (IS_BACKEND_ENABLED) {
-      const { error } = await api.cart.add(productId, size);
+      const { data, error } = await api.cart.add(productId, size);
       if (error) {
-        setCartItems(prevItems); // rollback
+        // Rollback on failure
+        setCartItems(prevItems);
         persistCartLocal(prevItems);
+        setCartError(error);
+      } else if (data?.items) {
+        // Adopt the server's authoritative state (prevents quantity drift on refresh)
+        setCartItems(data.items);
       }
     }
   }
 
   async function removeFromCart({ productId, size }) {
+    const pid = toStr(productId);
     const prevItems = cartItems;
-    const nextItems = cartItems.filter((i) => !(i.productId === productId && i.size === size));
+    const nextItems = cartItems.filter(
+      (i) => !(toStr(i.productId) === pid && i.size === size),
+    );
+    setCartError(null);
 
     setCartItems(nextItems);
     persistCartLocal(nextItems);
 
     if (IS_BACKEND_ENABLED) {
-      const { error } = await api.cart.remove(productId, size);
+      const { data, error } = await api.cart.remove(pid, size);
       if (error) {
         setCartItems(prevItems);
         persistCartLocal(prevItems);
+        setCartError(error);
+      } else if (data?.items) {
+        setCartItems(data.items);
       }
     }
   }
@@ -145,19 +171,24 @@ export function StoreProvider({ children }) {
       return;
     }
 
+    const pid = toStr(productId);
     const prevItems = cartItems;
     const nextItems = cartItems.map((i) =>
-      i.productId === productId && i.size === size ? { ...i, quantity } : i
+      toStr(i.productId) === pid && i.size === size ? { ...i, quantity } : i,
     );
+    setCartError(null);
 
     setCartItems(nextItems);
     persistCartLocal(nextItems);
 
     if (IS_BACKEND_ENABLED) {
-      const { error } = await api.cart.update(productId, size, quantity);
+      const { data, error } = await api.cart.update(pid, size, quantity);
       if (error) {
         setCartItems(prevItems);
         persistCartLocal(prevItems);
+        setCartError(error);
+      } else if (data?.items) {
+        setCartItems(data.items);
       }
     }
   }
@@ -165,8 +196,9 @@ export function StoreProvider({ children }) {
   async function clearCartLocal() {
     setCartItems([]);
     persistCartLocal([]);
-    // Issue 2 fix: also clear on the backend so the cart doesn't
-    // reappear on page refresh (backend is the source of truth in API mode)
+    setCartError(null);
+    // Also clear on the backend so the cart doesn't reappear on page refresh
+    // (backend is the source of truth in API mode)
     if (IS_BACKEND_ENABLED) {
       await api.cart.clear();
     }
@@ -174,31 +206,37 @@ export function StoreProvider({ children }) {
 
   // ─── Wishlist actions ──────────────────────────────────────────────────────
   async function toggleWishlist({ product }) {
-    const productId = product.id || product._id;
+    const productId = toStr(product.id || product._id);
     const prevItems = wishlistItems;
-    const exists = wishlistItems.some((i) => i.productId === productId);
+    setWishlistError(null);
+
+    const exists = wishlistItems.some((i) => toStr(i.productId) === productId);
 
     const nextItems = exists
-      ? wishlistItems.filter((i) => i.productId !== productId)
+      ? wishlistItems.filter((i) => toStr(i.productId) !== productId)
       : [
-          ...wishlistItems,
-          {
-            productId: productId,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            category: product.category,
-          },
-        ];
+        ...wishlistItems,
+        {
+          productId,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          category: product.category,
+        },
+      ];
 
     setWishlistItems(nextItems);
     persistWishlistLocal(nextItems);
 
     if (IS_BACKEND_ENABLED) {
-      const { error } = await api.wishlist.toggle(productId);
+      const { data, error } = await api.wishlist.toggle(productId);
       if (error) {
         setWishlistItems(prevItems);
         persistWishlistLocal(prevItems);
+        setWishlistError(error);
+      } else if (data?.items) {
+        // Adopt server authoritative state
+        setWishlistItems(data.items);
       }
     }
   }
@@ -209,6 +247,8 @@ export function StoreProvider({ children }) {
       wishlistItems,
       cartLoading,
       wishlistLoading,
+      cartError,
+      wishlistError,
       addToCart,
       removeFromCart,
       updateCartQuantity,
@@ -216,7 +256,7 @@ export function StoreProvider({ children }) {
       toggleWishlist,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cartItems, wishlistItems, cartLoading, wishlistLoading],
+    [cartItems, wishlistItems, cartLoading, wishlistLoading, cartError, wishlistError],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

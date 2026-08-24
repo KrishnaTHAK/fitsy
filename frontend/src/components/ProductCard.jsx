@@ -5,25 +5,42 @@ import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import ProductImage from './ProductImage';
 
+// Normalize product IDs to strings for reliable === comparisons.
+// Static catalog uses numeric ids; backend returns MongoDB ObjectId strings.
+const toStr = (v) => String(v ?? '');
+
 export default function ProductCard({ product, featured = false }) {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { cartItems, addToCart, updateCartQuantity, wishlistItems, toggleWishlist } = useStore();
+
+  const productId = toStr(product.id || product._id);
+
+  // Wishlist check — compare as strings to handle numeric vs ObjectId ids
   const isWishlisted = isAuthenticated
-    ? wishlistItems.some((item) => item.productId === (product.id || product._id))
+    ? wishlistItems.some((item) => toStr(item.productId) === productId)
     : false;
 
-  const totalQuantity = useMemo(() => {
-    return cartItems
-      .filter((item) => item.productId === (product.id || product._id))
-      .reduce((sum, item) => sum + item.quantity, 0);
-  }, [cartItems, product]);
+  // Use the first available size as the default active size for the card
+  const defaultSize = product.sizes?.[0] || 'Standard';
 
+  // Find the cart item for this product at the default/active size specifically
+  // (not a cross-size aggregate) so the quantity adjuster controls the right item
   const cartItemForProduct = useMemo(
-    () => cartItems.find((item) => item.productId === (product.id || product._id)),
-    [cartItems, product]
+    () => cartItems.find((item) => toStr(item.productId) === productId && item.size === defaultSize),
+    [cartItems, productId, defaultSize],
   );
-  const activeSize = cartItemForProduct ? cartItemForProduct.size : product.sizes?.[0] || 'Standard';
+
+  // Quantity shown on the card is size-specific, not a cross-size total
+  const activeSize = cartItemForProduct ? cartItemForProduct.size : defaultSize;
+  const sizeQuantity = cartItemForProduct ? cartItemForProduct.quantity : 0;
+
+  // Overall count across all sizes — used only to decide whether to show the
+  // quantity adjuster at all (if the product is in the cart in any size)
+  const totalQuantity = useMemo(
+    () => cartItems.filter((item) => toStr(item.productId) === productId).reduce((sum, item) => sum + item.quantity, 0),
+    [cartItems, productId],
+  );
 
   function handleWishlistToggle(event) {
     event.preventDefault();
@@ -38,7 +55,7 @@ export default function ProductCard({ product, featured = false }) {
   }
 
   return (
-    <Link to={`/product/${product.id || product._id}`} className={`product-tile ${featured ? 'product-tile--featured' : ''}`}>
+    <Link to={`/product/${productId}`} className={`product-tile ${featured ? 'product-tile--featured' : ''}`}>
       <div className="product-tile__media">
         <ProductImage product={product} src={product.image} alt={product.name} className="product-tile__image" loading="lazy" />
         <div className="product-tile__overlay"></div>
@@ -64,8 +81,8 @@ export default function ProductCard({ product, featured = false }) {
         </div>
         {totalQuantity > 0 ? (
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-            <div 
-              className="quantity-adjuster" 
+            <div
+              className="quantity-adjuster"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#121212', color: '#ffffff', borderRadius: '6px', flex: 1 }}
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
             >
@@ -77,12 +94,15 @@ export default function ProductCard({ product, featured = false }) {
                   e.preventDefault();
                   e.stopPropagation();
                   if (!isAuthenticated) { navigate('/auth'); return; }
-                  updateCartQuantity({ productId: product.id || product._id, size: activeSize, quantity: totalQuantity - 1 });
+                  // Use sizeQuantity (size-specific) so the decrement targets the right item
+                  updateCartQuantity({ productId, size: activeSize, quantity: sizeQuantity - 1 });
                 }}
               >
                 -
               </button>
-              <span className="qty-val" style={{ fontWeight: 'bold', fontSize: '13px' }}>{totalQuantity} in bag</span>
+              <span className="qty-val" style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                {sizeQuantity} in bag
+              </span>
               <button
                 type="button"
                 className="qty-btn"
@@ -91,7 +111,7 @@ export default function ProductCard({ product, featured = false }) {
                   e.preventDefault();
                   e.stopPropagation();
                   if (!isAuthenticated) { navigate('/auth'); return; }
-                  updateCartQuantity({ productId: product.id || product._id, size: activeSize, quantity: totalQuantity + 1 });
+                  updateCartQuantity({ productId, size: activeSize, quantity: sizeQuantity + 1 });
                 }}
               >
                 +

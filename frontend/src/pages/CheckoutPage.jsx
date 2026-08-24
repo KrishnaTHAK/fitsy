@@ -48,6 +48,9 @@ export default function CheckoutPage() {
     [cartItems]
   );
   const shippingFee = subtotal > 120 ? 0 : 15;
+  // grandTotal is the canonical total used throughout this component.
+  // NOTE: a previous version used `totalPrice` which was never defined and
+  // caused a ReferenceError that crashed the checkout page.
   const grandTotal = Math.max(0, subtotal + shippingFee - discount);
 
   const handleChange = (e) => {
@@ -109,7 +112,7 @@ export default function CheckoutPage() {
     }));
 
     const { error: apiError } = await api.orders.create({
-      items: orderItems, shippingDetails, totalPrice, paymentMethod,
+      items: orderItems, shippingDetails, totalPrice: grandTotal, paymentMethod,
     });
 
     setOrderLoading(false);
@@ -134,7 +137,7 @@ export default function CheckoutPage() {
     }));
 
     const { data, error: apiError } = await api.orders.createPaymentIntent({
-      items: orderItems, shippingDetails, totalPrice, paymentMethod,
+      items: orderItems, shippingDetails, totalPrice: grandTotal, paymentMethod,
     });
 
     setOrderLoading(false);
@@ -208,19 +211,19 @@ export default function CheckoutPage() {
 
         {/* ── Checkout Steps Indicator ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2.5rem', borderBottom: '1px solid var(--line)', paddingBottom: '1rem' }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: checkoutStep >= 1 ? '600' : '400', color: checkoutStep >= 1 ? 'var(--ink)' : 'var(--ink-soft)' }}>
-             <div style={{ width: 28, height: 28, borderRadius: '50%', background: checkoutStep >= 1 ? 'var(--accent)' : 'var(--line)', color: checkoutStep >= 1 ? 'var(--bg)' : 'var(--ink)', display: 'grid', placeItems: 'center', fontSize: '0.85rem' }}>1</div>
-             Shipping
-           </div>
-           <div style={{ height: 1, flex: 1, maxWidth: 60, background: 'var(--line)' }}></div>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: checkoutStep === 2 ? '600' : '400', color: checkoutStep === 2 ? 'var(--ink)' : 'var(--ink-soft)' }}>
-             <div style={{ width: 28, height: 28, borderRadius: '50%', background: checkoutStep === 2 ? 'var(--accent)' : 'var(--line)', color: checkoutStep === 2 ? 'var(--bg)' : 'var(--ink)', display: 'grid', placeItems: 'center', fontSize: '0.85rem' }}>2</div>
-             Review & Pay
-           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: checkoutStep >= 1 ? '600' : '400', color: checkoutStep >= 1 ? 'var(--ink)' : 'var(--ink-soft)' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: checkoutStep >= 1 ? 'var(--accent)' : 'var(--line)', color: checkoutStep >= 1 ? 'var(--bg)' : 'var(--ink)', display: 'grid', placeItems: 'center', fontSize: '0.85rem' }}>1</div>
+            Shipping
+          </div>
+          <div style={{ height: 1, flex: 1, maxWidth: 60, background: 'var(--line)' }}></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: checkoutStep === 2 ? '600' : '400', color: checkoutStep === 2 ? 'var(--ink)' : 'var(--ink-soft)' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: checkoutStep === 2 ? 'var(--accent)' : 'var(--line)', color: checkoutStep === 2 ? 'var(--bg)' : 'var(--ink)', display: 'grid', placeItems: 'center', fontSize: '0.85rem' }}>2</div>
+            Review & Pay
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem', alignItems: 'start' }}>
-          
+
           {/* ── Left column: Dynamic Content based on Step ────────────────────── */}
           <div style={{ display: 'grid', gap: '2rem' }}>
 
@@ -365,7 +368,7 @@ export default function CheckoutPage() {
 
             {checkoutStep === 2 && (
               <div style={{ display: 'grid', gap: '2rem' }}>
-                
+
                 {/* ── Review Address Block ── */}
                 <div style={{ border: '1px solid var(--line)', background: 'var(--surface)', padding: '2rem', borderRadius: '2rem', boxShadow: 'var(--shadow)', display: 'grid', gap: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -413,7 +416,7 @@ export default function CheckoutPage() {
 
               </div>
             )}
-            
+
           </div>
 
           {/* ── Right column: Sticky Order Summary & Final Actions ──────────── */}
@@ -423,11 +426,13 @@ export default function CheckoutPage() {
             <div style={{ display: 'grid', gap: '0.8rem', fontSize: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--ink-soft)' }}>Subtotal ({cartItems.reduce((acc, item) => acc + item.quantity, 0)} items)</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span>${subtotal.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--ink-soft)' }}>Shipping</span>
-                <span style={{ color: 'var(--accent)', fontWeight: '500' }}>Free</span>
+                <span style={{ color: 'var(--accent)', fontWeight: '500' }}>
+                  {shippingFee === 0 ? 'Free' : `$${shippingFee.toFixed(2)}`}
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--ink-soft)' }}>Taxes</span>
@@ -437,7 +442,7 @@ export default function CheckoutPage() {
 
             <div style={{ borderTop: '1px solid var(--line)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', fontSize: '1.4rem', fontWeight: 'bold' }}>
               <span>Grand Total</span>
-              <span style={{ color: 'var(--accent)' }}>${totalPrice.toFixed(2)}</span>
+              <span style={{ color: 'var(--accent)' }}>${grandTotal.toFixed(2)}</span>
             </div>
 
             {/* Payment Method Selector — shown only on Step 2 */}
@@ -489,7 +494,7 @@ export default function CheckoutPage() {
                 <CreditCard size={20} />
                 {orderLoading
                   ? (paymentMethod === 'Cash on Delivery' ? 'Placing Order…' : 'Initiating Payment…')
-                  : (paymentMethod === 'Cash on Delivery' ? 'Confirm & Place Order' : `Pay ₹${totalPrice.toFixed(2)} via ${paymentMethod === 'UPI / Digital Wallet' ? 'UPI' : 'Card'}`)
+                  : (paymentMethod === 'Cash on Delivery' ? 'Confirm & Place Order' : `Pay ₹${grandTotal.toFixed(2)} via ${paymentMethod === 'UPI / Digital Wallet' ? 'UPI' : 'Card'}`)
                 }
               </button>
             )}
@@ -506,7 +511,7 @@ export default function CheckoutPage() {
                 <StripePaymentForm
                   clientSecret={clientSecret}
                   paymentMethod={paymentMethod}
-                  userInfo={{ name: user?.name, email: user?.email, total: totalPrice }}
+                  userInfo={{ name: user?.name, email: user?.email, total: grandTotal }}
                   returnUrl={`${window.location.origin}/checkout`}
                   onSuccess={handleStripeSuccess}
                   onError={handleStripeError}
