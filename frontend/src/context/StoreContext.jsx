@@ -12,62 +12,13 @@ const CART_STORAGE_KEY = 'fitsy-store-cart';
 const WISHLIST_STORAGE_KEY = 'fitsy-store-wishlist';
 const IS_BACKEND_ENABLED = Boolean(import.meta.env.VITE_API_URL);
 
-export const DEFAULT_DEMO_CART = [
-  {
-    productId: 'demo_cart_1',
-    name: 'Midnight Tailored Blazer',
-    price: 450.0,
-    size: '40R',
-    color: 'Midnight Blue',
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&q=80&w=900',
-    tryOnFit: true,
-  },
-  {
-    productId: 'demo_cart_2',
-    name: 'Aero Leather Sneakers',
-    price: 220.0,
-    size: '10',
-    color: 'Pure White',
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=900',
-    tryOnFit: true,
-  },
-];
+export const DEFAULT_DEMO_CART = [];
 
-export const DEFAULT_DEMO_WISHLIST = [
-  {
-    productId: 'demo_wish_1',
-    name: 'Obsidian Tote',
-    price: 895,
-    description: 'Structured calfskin leather',
-    category: 'Accessories',
-    image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=900',
-    vtoType: 'accessories',
-  },
-  {
-    productId: 'demo_wish_2',
-    name: 'Silk Trench',
-    price: 1250,
-    description: 'Champagne tailored fit',
-    category: 'Outerwear',
-    image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=900',
-    vtoType: 'upper-body',
-  },
-  {
-    productId: 'demo_wish_3',
-    name: 'Aero Shades',
-    price: 340,
-    description: 'Titanium frame, polarized',
-    category: 'Accessories',
-    image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=900',
-    vtoType: 'accessories',
-  },
-];
+export const DEFAULT_DEMO_WISHLIST = [];
 
 export function StoreProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
-  const [cartItems, setCartItems] = useState(DEFAULT_DEMO_CART);
+  const [cartItems, setCartItems] = useState([]);
   const [wishlistItems, setWishlistItems] = useState(DEFAULT_DEMO_WISHLIST);
   const [cartLoading, setCartLoading] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -78,7 +29,7 @@ export function StoreProvider({ children }) {
       // Keep demo defaults accessible for unauthenticated preview
       const localCart = safeReadJson(CART_STORAGE_KEY, {});
       const localWish = safeReadJson(WISHLIST_STORAGE_KEY, {});
-      setCartItems(localCart['guest'] || DEFAULT_DEMO_CART);
+      setCartItems(localCart['guest'] || []);
       setWishlistItems(localWish['guest'] || DEFAULT_DEMO_WISHLIST);
       return;
     }
@@ -90,8 +41,8 @@ export function StoreProvider({ children }) {
     if (allCart[user.id]) {
       setCartItems(allCart[user.id]);
     } else {
-      setCartItems(DEFAULT_DEMO_CART);
-      persistCartLocal(DEFAULT_DEMO_CART);
+      setCartItems([]);
+      persistCartLocal([]);
     }
 
     if (allWishlist[user.id]) {

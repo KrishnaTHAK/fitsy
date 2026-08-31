@@ -1,9 +1,16 @@
 const mongoose = require('mongoose');
+const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const test = async () => {
-    await mongoose.connect(process.env.MONGO_URI);
+    const mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) {
+        console.warn('MONGO_URI is not set. Create backend/.env from backend/.env.example.');
+        process.exit(1);
+    }
+
+    await mongoose.connect(mongoUri);
     console.log("Connected to MongoDB");
 
     const Cart = require('./models/Cart');
