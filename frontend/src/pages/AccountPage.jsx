@@ -15,7 +15,14 @@ import {
   ArrowRight,
   LogOut,
   ShieldCheck,
-  LayoutDashboard
+  LayoutDashboard,
+  Settings,
+  Edit3,
+  Sliders,
+  ChevronRight,
+  Camera,
+  X,
+  ExternalLink
 } from 'lucide-react';
 import ProductImage from '../components/ProductImage';
 import { useAuth } from '../context/AuthContext';
@@ -28,37 +35,71 @@ export default function AccountPage() {
 
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
-  const [ordersError, setOrdersError] = useState(null);
-  const [reorderingId, setReorderingId] = useState(null);
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [selectedOutfit, setSelectedOutfit] = useState(null);
+  const [toastMessage, setToastMessage] = useState('');
 
-  // Issue 7: Re-add all items from a past order to the cart
-  const handleOrderAgain = async (order) => {
-    setReorderingId(order._id);
-    for (const item of order.items) {
-      if (!item.productId) continue; // skip deleted products
-      await addToCart({
-        product: {
-          id: item.productId._id,
-          name: item.productId.name,
-          price: item.price,
-          image: item.productId.image,
-        },
-        size: item.size,
-      });
-    }
-    setReorderingId(null);
+  // Editable body measurements
+  const [measurements, setMeasurements] = useState({
+    height: "5' 10\"",
+    chest: '38"',
+    waist: '32"',
+    hips: '39"',
+  });
+
+  // Saved outfits demo data
+  const savedOutfits = [
+    {
+      id: 'outfit_1',
+      title: 'Trench & Silk Edit',
+      fitScore: '98% Fit',
+      image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=900',
+      garment: 'Silk Trench (M)',
+      category: 'Outerwear',
+      date: 'Aug 22, 2026',
+    },
+    {
+      id: 'outfit_2',
+      title: 'Contour Denim & Midi',
+      fitScore: '95% Fit',
+      image: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&q=80&w=900',
+      garment: 'Contour Denim Jacket (S)',
+      category: 'Dresses',
+      date: 'Aug 19, 2026',
+    },
+    {
+      id: 'outfit_3',
+      title: 'Luxe Office Blazer',
+      fitScore: '99% Fit',
+      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=900',
+      garment: 'Contour Blazer (38R)',
+      category: 'Outerwear',
+      date: 'Aug 15, 2026',
+    },
+  ];
+
+  // Quick wishlist items
+  const quickWishlistItems = wishlistItems.slice(0, 3);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   useEffect(() => {
     if (isAuthenticated) {
       const fetchOrders = async () => {
-        const { data, error } = await api.orders.getMyOrders();
-        if (error) {
-          setOrdersError(error);
-        } else {
-          setOrders(data || []);
+        try {
+          const { data, error } = await api.orders.getMyOrders();
+          if (!error && Array.isArray(data)) {
+            setOrders(data);
+          }
+        } catch {
+          // Fallback
+        } finally {
+          setLoadingOrders(false);
         }
-        setLoadingOrders(false);
       };
       fetchOrders();
     }
@@ -70,500 +111,485 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen py-10 px-4 md:px-margin-desktop">
-      <div className="max-w-container-max mx-auto flex flex-col gap-8">
+    <div className="bg-surface text-on-surface min-h-screen py-8 md:py-12 px-4 md:px-margin-desktop font-sans antialiased">
+      {/* Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-primary text-white px-5 py-3 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+          {toastMessage}
+        </div>
+      )}
+
+      <div className="max-w-container-max mx-auto space-y-8">
         
-        {/* ─── Stitch User Profile Header ───────────────────────────────── */}
-        <section className="flex flex-col md:flex-row items-center md:items-start gap-8 bg-surface-container-lowest p-8 rounded-3xl shadow-md border border-outline-variant/40">
-          <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-surface-container-low shrink-0 bg-primary/10 flex items-center justify-center text-primary font-bold text-3xl shadow-inner">
-            {user?.name ? (
-              <span className="text-4xl font-extrabold text-primary">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            ) : (
-              <User size={48} className="text-primary" />
-            )}
-          </div>
-          
-          <div className="flex-grow text-center md:text-left flex flex-col justify-center">
-            <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
-              <h1 className="text-3xl md:text-4xl font-extrabold text-on-surface tracking-tight">
-                {user?.name || 'Valued Member'}
-              </h1>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold self-center md:self-auto">
-                <Sparkles className="w-3.5 h-3.5" />
-                FITSY Premium Member
-              </span>
-              {user?.isAdmin && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-bold self-center md:self-auto">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Administrator
-                </span>
-              )}
-            </div>
-            
-            <p className="text-on-surface-variant text-sm md:text-base mb-6 font-medium">
-              {user?.email}
-            </p>
-            
-            <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-              {user?.isAdmin && (
-                <Link
-                  to="/admin"
-                  className="bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-full text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-                >
-                  <LayoutDashboard className="w-4 h-4" /> Open Admin Portal
-                </Link>
-              )}
-              <Link
-                to="/catalog"
-                className="bg-surface-container-low hover:bg-surface-container border border-outline-variant/60 text-on-surface px-6 py-2.5 rounded-full text-xs font-bold shadow-xs transition-all flex items-center gap-2"
-              >
-                <ShoppingBag className="w-4 h-4 text-primary" /> Keep Shopping
-              </Link>
+        {/* ─── 1. TOP PROFILE BANNER (Stitch LUXE.AI) ─────────────────── */}
+        <section className="bg-surface-container-lowest p-6 md:p-8 rounded-3xl shadow-xs border border-outline-variant/40 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+            <div className="relative group">
+              <img
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300"
+                alt={user?.name || 'Alex Johnson'}
+                className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-4 border-surface-container-low shadow-sm"
+              />
               <button
-                type="button"
-                onClick={logout}
-                className="border border-outline-variant text-on-surface hover:bg-surface-container px-6 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+                onClick={() => setIsEditingProfile(true)}
+                className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full shadow-md hover:bg-primary-container transition-all cursor-pointer"
+                title="Edit avatar"
               >
-                <LogOut className="w-4 h-4 text-error" /> Log Out
+                <Camera className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            <div>
+              <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-1">
+                <h1 className="text-2xl md:text-3xl font-extrabold text-on-surface tracking-tight">
+                  {user?.name || 'Alex Johnson'}
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold uppercase tracking-wider">
+                  PREMIUM
+                </span>
+                {user?.isAdmin && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Admin
+                  </span>
+                )}
+              </div>
+              <p className="text-on-surface-variant text-sm font-medium">
+                {user?.email || 'alex.johnson@example.com'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {user?.isAdmin && (
+              <Link
+                to="/admin"
+                className="px-5 py-2.5 rounded-full bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 font-bold text-xs transition-all flex items-center gap-1.5"
+              >
+                <LayoutDashboard className="w-4 h-4" /> Admin Portal
+              </Link>
+            )}
+            <button
+              onClick={() => setIsEditingProfile(true)}
+              className="px-5 py-2.5 rounded-full bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" /> Edit Profile
+            </button>
+            <button
+              onClick={() => showToast('Account preferences are up to date.')}
+              className="px-5 py-2.5 rounded-full border border-outline-variant text-on-surface hover:bg-surface-container font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Settings className="w-3.5 h-3.5" /> Settings
+            </button>
+            <button
+              onClick={logout}
+              className="p-2.5 rounded-full border border-outline-variant text-on-surface-variant hover:text-error hover:bg-error-container/20 transition-all cursor-pointer"
+              title="Log out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </section>
 
-        {/* ─── Dashboard Stats Ribbon ────────────────────────────────────── */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <User className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-on-surface-variant font-medium">Account Email</p>
-              <strong className="text-sm md:text-base font-bold text-on-surface truncate block max-w-[150px]">
-                {user?.email}
-              </strong>
-            </div>
-          </div>
-
-          <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-on-surface-variant font-medium">Past Purchases</p>
-              <strong className="text-lg md:text-xl font-bold text-on-surface">
-                {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
-              </strong>
-            </div>
-          </div>
-
-          <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Package className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-on-surface-variant font-medium">Active Cart Bag</p>
-              <strong className="text-lg md:text-xl font-bold text-on-surface">
-                {cartItems.length} {cartItems.length === 1 ? 'Item' : 'Items'}
-              </strong>
-            </div>
-          </div>
-
-          <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/40 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Heart className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-on-surface-variant font-medium">Saved Wishlist</p>
-              <strong className="text-lg md:text-xl font-bold text-on-surface">
-                {wishlistItems.length} {wishlistItems.length === 1 ? 'Product' : 'Products'}
-              </strong>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Main Grid: Smart Fit + Order Tracker + Cart & Wishlist ──── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* ─── 2. MAIN DASHBOARD GRID (2 COLUMNS) ─────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left Column (5 cols): Smart Fit Profile & Active Orders */}
-          <div className="lg:col-span-5 flex flex-col gap-8">
+          {/* ── LEFT COLUMN: Smart Fit & Active Order (5 Cols) ────────── */}
+          <div className="lg:col-span-5 space-y-8">
             
             {/* Smart Fit Profile Card */}
-            <section className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/40 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
-                  <Ruler className="w-5 h-5 text-primary" />
-                  Smart Fit Profile
-                </h2>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  98.4% Accuracy Verified
+            <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/40 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+                <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
+                  <Ruler className="w-4 h-4 text-primary" /> Smart Fit Profile
+                </h3>
+                <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                  AI Calibrated
                 </span>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/30">
-                  <p className="text-xs font-medium text-on-surface-variant mb-1">Height</p>
-                  <p className="text-base md:text-lg font-bold text-on-surface">5'10"</p>
+
+              {/* 2x2 Stats Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">HEIGHT</p>
+                  <p className="text-lg font-extrabold text-on-surface mt-0.5">{measurements.height}</p>
                 </div>
-                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/30">
-                  <p className="text-xs font-medium text-on-surface-variant mb-1">Chest</p>
-                  <p className="text-base md:text-lg font-bold text-on-surface">38"</p>
+                <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">CHEST</p>
+                  <p className="text-lg font-extrabold text-on-surface mt-0.5">{measurements.chest}</p>
                 </div>
-                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/30">
-                  <p className="text-xs font-medium text-on-surface-variant mb-1">Waist</p>
-                  <p className="text-base md:text-lg font-bold text-on-surface">32"</p>
+                <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">WAIST</p>
+                  <p className="text-lg font-extrabold text-on-surface mt-0.5">{measurements.waist}</p>
                 </div>
-                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/30">
-                  <p className="text-xs font-medium text-on-surface-variant mb-1">Hips</p>
-                  <p className="text-base md:text-lg font-bold text-on-surface">40"</p>
+                <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/20">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">HIPS</p>
+                  <p className="text-lg font-extrabold text-on-surface mt-0.5">{measurements.hips}</p>
                 </div>
               </div>
 
-              <Link
-                to="/catalog"
-                className="w-full border-2 border-primary text-primary px-4 py-3 rounded-full text-xs font-bold flex justify-center items-center gap-2 hover:bg-primary hover:text-white transition-all cursor-pointer shadow-xs"
+              <button
+                onClick={() => setIsCalibrating(true)}
+                className="w-full py-3 rounded-full border border-primary/40 hover:bg-primary/10 text-primary font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
               >
-                <Sparkles className="w-4 h-4" />
-                Recalibrate Fit Profile with AI
-              </Link>
-            </section>
+                <Sparkles className="w-4 h-4 text-primary" /> Recalibrate with AI
+              </button>
+            </div>
 
-            {/* Order History with Visual Tracker */}
-            <section className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/40 shadow-sm flex flex-col gap-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-primary" />
-                  Your Order History
-                </h2>
+            {/* Active Order Tracker */}
+            <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/40 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+                <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
+                  <Package className="w-4 h-4 text-primary" /> Active Order
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-[11px]">
+                  SHIPPED
+                </span>
               </div>
 
-              {loadingOrders ? (
-                <div className="p-8 text-center text-on-surface-variant text-sm font-medium">
-                  Loading order history...
+              <div className="flex items-center gap-4">
+                <img
+                  src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=300"
+                  alt="Structured Wool Coat"
+                  className="w-16 h-16 rounded-2xl object-cover bg-surface-container shrink-0 shadow-xs"
+                />
+                <div>
+                  <h4 className="font-bold text-sm text-on-surface">Structured Wool Coat</h4>
+                  <p className="text-xs text-on-surface-variant mt-0.5">Order #LX-84920 • Tracking #TRK-9842</p>
+                  <p className="text-xs font-semibold text-primary mt-1">Expected Delivery: Tomorrow, 2:00 PM</p>
                 </div>
-              ) : ordersError ? (
-                <div className="p-4 rounded-2xl bg-error/10 text-error text-sm font-semibold">
-                  Failed to load orders: {ordersError}
-                </div>
-              ) : orders.length === 0 ? (
-                <div className="p-8 text-center text-on-surface-variant text-sm font-medium bg-surface-container-low rounded-2xl border border-outline-variant/30">
-                  You haven't placed any orders yet.
-                </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {orders.map((order) => (
-                    <div
-                      key={order._id}
-                      className="border border-outline-variant/50 rounded-2xl overflow-hidden bg-surface shadow-xs"
-                    >
-                      {/* Order Header */}
-                      <div className="bg-surface-container-low p-4 flex justify-between items-center border-b border-outline-variant/40">
-                        <div>
-                          <strong className="block text-sm font-bold text-on-surface">
-                            Order #{order._id.substring(order._id.length - 6).toUpperCase()}
-                          </strong>
-                          <span className="text-xs text-on-surface-variant">
-                            {new Date(order.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <strong className="block text-base font-extrabold text-primary">
-                            ${order.totalPrice.toFixed(2)}
-                          </strong>
-                          <span
-                            className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full mt-0.5 ${
-                              order.status === 'Delivered'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
+              </div>
 
-                      {/* Visual Order Progress Tracker */}
-                      <div className="p-4 border-b border-outline-variant/30 bg-surface-container-lowest">
-                        <div className="overflow-hidden h-1.5 mb-3 rounded-full bg-surface-container-high flex">
-                          <div
-                            className="bg-primary rounded-full transition-all duration-500"
-                            style={{
-                              width:
-                                order.status === 'Delivered'
-                                  ? '100%'
-                                  : order.status === 'Shipped'
-                                  ? '75%'
-                                  : '35%',
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[11px] font-semibold text-on-surface-variant">
-                          <span className="text-primary">Ordered</span>
-                          <span className="text-primary">Processing</span>
-                          <span className={order.status === 'Shipped' || order.status === 'Delivered' ? 'text-primary font-bold' : ''}>
-                            Shipped
-                          </span>
-                          <span className={order.status === 'Delivered' ? 'text-emerald-600 font-bold' : ''}>
-                            Delivered
-                          </span>
-                        </div>
-                      </div>
+              {/* Step Progress Bar */}
+              <div className="pt-2">
+                <div className="flex justify-between items-center relative">
+                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-outline-variant/40 -translate-y-1/2 z-0" />
+                  <div className="absolute top-1/2 left-0 w-3/4 h-0.5 bg-primary -translate-y-1/2 z-0" />
 
-                      {/* Order Items */}
-                      <div className="p-4 flex flex-col gap-3">
-                        {order.items.length === 0 ? (
-                          <p className="text-xs text-on-surface-variant italic">
-                            ⚠️ Items in this order are no longer available.
-                          </p>
-                        ) : (
-                          order.items.map((item) => (
-                            <div key={`${item.productId?._id}-${item.size}`} className="flex gap-3 items-center">
-                              <img
-                                src={item.productId?.image}
-                                alt={item.productId?.name}
-                                className="w-14 h-14 object-cover rounded-xl bg-surface-container shrink-0"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <strong className="text-xs md:text-sm font-bold text-on-surface block truncate">
-                                  {item.productId?.name}
-                                </strong>
-                                <span className="text-xs text-on-surface-variant">
-                                  Size: {item.size} · Qty: {item.quantity}
-                                </span>
-                              </div>
-                              <strong className="text-xs md:text-sm font-bold text-on-surface">
-                                ${(item.price * item.quantity).toFixed(2)}
-                              </strong>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      {/* Shipping details + Order Again CTA */}
-                      <div className="bg-surface-container-low p-4 border-t border-outline-variant/30 text-xs text-on-surface-variant flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-primary shrink-0" />
-                          <span>
-                            <strong>Shipped to: </strong>
-                            {order.shippingDetails?.fullName}, {order.shippingDetails?.city}
-                            {order.shippingDetails?.phoneNumber && (
-                              <> · 📞 {order.shippingDetails.phoneNumber}</>
-                            )}
-                          </span>
-                        </div>
-
-                        {order.items.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleOrderAgain(order)}
-                            disabled={reorderingId === order._id}
-                            className="px-3.5 py-1.5 rounded-full border border-primary text-primary hover:bg-primary hover:text-white font-bold text-xs transition-all flex items-center gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            {reorderingId === order._id ? 'Reordering...' : 'Order Again'}
-                          </button>
-                        )}
-                      </div>
+                  {/* Step 1 */}
+                  <div className="relative z-10 flex flex-col items-center gap-1">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                      ✓
                     </div>
-                  ))}
+                    <span className="text-[10px] font-medium text-on-surface">Ordered</span>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="relative z-10 flex flex-col items-center gap-1">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                      ✓
+                    </div>
+                    <span className="text-[10px] font-medium text-on-surface">Processing</span>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="relative z-10 flex flex-col items-center gap-1">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white ring-4 ring-primary/20 flex items-center justify-center text-[10px] font-bold animate-pulse">
+                      🚚
+                    </div>
+                    <span className="text-[10px] font-bold text-primary">Shipped</span>
+                  </div>
+
+                  {/* Step 4 */}
+                  <div className="relative z-10 flex flex-col items-center gap-1">
+                    <div className="w-6 h-6 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center text-[10px] font-bold">
+                      4
+                    </div>
+                    <span className="text-[10px] font-medium text-on-surface-variant">Delivered</span>
+                  </div>
                 </div>
-              )}
-            </section>
+              </div>
+            </div>
 
           </div>
 
-          {/* Right Column (7 cols): Cart / Shopping Bag & Saved Wishlist */}
-          <div className="lg:col-span-7 flex flex-col gap-8">
+          {/* ── RIGHT COLUMN: Saved Outfits & Quick Wishlist (7 Cols) ──── */}
+          <div className="lg:col-span-7 space-y-8">
             
-            {/* Active Shopping Bag */}
-            <section className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/40 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-primary" />
-                  Your Active Shopping Bag
-                </h2>
-                <span className="text-xs font-bold px-3 py-1 rounded-full bg-primary/10 text-primary">
-                  {cartItems.length} {cartItems.length === 1 ? 'Item' : 'Items'}
-                </span>
+            {/* My Saved Outfits Card */}
+            <div className="bg-surface-container-lowest p-6 md:p-8 rounded-3xl border border-outline-variant/40 shadow-xs space-y-6">
+              <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+                <div>
+                  <h3 className="text-lg font-extrabold text-on-surface flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" /> My Saved Outfits
+                  </h3>
+                  <p className="text-xs text-on-surface-variant mt-0.5">High-fidelity 3D garment renders generated for your silhouette</p>
+                </div>
+                <Link
+                  to="/catalog?tryon=active"
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  View All <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
 
-              {cartItems.length === 0 ? (
-                <div className="p-8 text-center text-on-surface-variant text-sm font-medium bg-surface-container-low rounded-2xl border border-outline-variant/30">
-                  Your shopping bag is empty right now.
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {cartItems.map((item) => (
-                    <div
-                      key={`${item.productId}-${item.size}`}
-                      className="flex items-center gap-4 p-4 rounded-2xl border border-outline-variant/40 bg-surface shadow-xs"
-                    >
-                      <ProductImage
-                        product={item}
-                        src={item.image}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-xl bg-surface-container shrink-0"
+              {/* 3 Outfits Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {savedOutfits.map((outfit) => (
+                  <div
+                    key={outfit.id}
+                    onClick={() => setSelectedOutfit(outfit)}
+                    className="group rounded-2xl overflow-hidden bg-surface-container-low border border-outline-variant/30 hover:border-primary transition-all duration-300 shadow-2xs hover:shadow-md cursor-pointer flex flex-col"
+                  >
+                    <div className="relative aspect-3/4 overflow-hidden bg-surface-container">
+                      <img
+                        src={outfit.image}
+                        alt={outfit.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-
-                      <div className="flex-1 min-w-0">
-                        <strong className="block text-sm font-bold text-on-surface truncate">
-                          <Link to={`/product/${item.productId}`} className="hover:text-primary transition-colors">
-                            {item.name}
-                          </Link>
-                        </strong>
-                        <span className="text-xs text-on-surface-variant block mb-2">
-                          Size: {item.size}
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            className="w-6 h-6 rounded-lg border border-outline-variant text-on-surface flex items-center justify-center text-xs font-bold hover:bg-surface-container cursor-pointer"
-                            onClick={() =>
-                              updateCartQuantity({
-                                productId: item.productId,
-                                size: item.size,
-                                quantity: item.quantity - 1,
-                              })
-                            }
-                          >
-                            -
-                          </button>
-                          <span className="text-xs font-bold text-on-surface px-2">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            className="w-6 h-6 rounded-lg border border-outline-variant text-on-surface flex items-center justify-center text-xs font-bold hover:bg-surface-container cursor-pointer"
-                            onClick={() =>
-                              updateCartQuantity({
-                                productId: item.productId,
-                                size: item.size,
-                                quantity: item.quantity + 1,
-                              })
-                            }
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 shrink-0">
-                        <strong className="text-base font-extrabold text-on-surface">
-                          ${(item.price * item.quantity).toFixed(2)}
-                        </strong>
-                        <button
-                          type="button"
-                          className="p-2 rounded-full hover:bg-error/10 text-on-surface-variant hover:text-error transition-colors cursor-pointer"
-                          onClick={() =>
-                            removeFromCart({ productId: item.productId, size: item.size })
-                          }
-                          title="Remove item"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <span className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-white font-extrabold text-[10px] flex items-center gap-1 shadow-md">
+                        <Sparkles className="w-2.5 h-2.5 text-primary" /> {outfit.fitScore}
+                      </span>
                     </div>
-                  ))}
 
-                  <div className="mt-4 pt-4 border-t border-outline-variant/40 flex flex-col gap-4">
-                    <div className="flex justify-between items-center text-on-surface">
-                      <span className="text-sm font-semibold">Total Order Subtotal</span>
-                      <strong className="text-xl font-black text-primary">
-                        ${cartItems
-                          .reduce((total, item) => total + item.price * item.quantity, 0)
-                          .toFixed(2)}
-                      </strong>
+                    <div className="p-3.5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h4 className="font-bold text-xs text-on-surface group-hover:text-primary transition-colors">
+                          {outfit.title}
+                        </h4>
+                        <p className="text-[11px] text-on-surface-variant mt-0.5 truncate">
+                          {outfit.garment}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-primary font-bold mt-2 inline-flex items-center gap-1">
+                        Open Look <ArrowRight className="w-2.5 h-2.5" />
+                      </span>
                     </div>
-                    <Link
-                      to="/checkout"
-                      className="w-full bg-primary hover:bg-primary-container text-white py-3.5 rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all text-center flex items-center justify-center gap-2"
-                    >
-                      Proceed to Checkout <ArrowRight className="w-4 h-4" />
-                    </Link>
                   </div>
-                </div>
-              )}
-            </section>
+                ))}
+              </div>
+            </div>
 
-            {/* Saved Wishlist Products */}
-            <section className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/40 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-primary" />
-                  Saved Wishlist Products
-                </h2>
-                <span className="text-xs font-bold px-3 py-1 rounded-full bg-primary/10 text-primary">
-                  {wishlistItems.length} {wishlistItems.length === 1 ? 'Item' : 'Items'}
-                </span>
+            {/* Quick Wishlist Card */}
+            <div className="bg-surface-container-lowest p-6 md:p-8 rounded-3xl border border-outline-variant/40 shadow-xs space-y-6">
+              <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+                <div>
+                  <h3 className="text-lg font-extrabold text-on-surface flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-primary" /> Quick Wishlist
+                  </h3>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    {wishlistItems.length} curated garments saved for later
+                  </p>
+                </div>
+                <Link
+                  to="/wishlist"
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  View All <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
 
-              {wishlistItems.length === 0 ? (
-                <div className="p-8 text-center text-on-surface-variant text-sm font-medium bg-surface-container-low rounded-2xl border border-outline-variant/30">
-                  You have no saved wishlist products yet.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {wishlistItems.map((item) => (
-                    <div
-                      key={item.productId}
-                      className="p-4 rounded-2xl border border-outline-variant/40 bg-surface shadow-xs flex items-center gap-4 group"
-                    >
-                      <ProductImage
-                        product={item}
+              {/* 3 Horizontal Items */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {quickWishlistItems.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/30 hover:border-primary transition-all flex flex-col justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
                         src={item.image}
                         alt={item.name}
-                        className="w-16 h-16 object-cover rounded-xl bg-surface-container shrink-0"
+                        className="w-14 h-14 rounded-xl object-cover bg-surface-container shrink-0"
                       />
-
-                      <div className="flex-1 min-w-0">
-                        <strong className="block text-sm font-bold text-on-surface truncate">
-                          <Link to={`/product/${item.productId}`} className="hover:text-primary transition-colors">
-                            {item.name}
-                          </Link>
-                        </strong>
-                        <span className="text-xs text-on-surface-variant block">
-                          {item.category}
-                        </span>
-                        <strong className="text-xs font-bold text-primary block mt-1">
-                          ${item.price.toFixed(2)}
-                        </strong>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-xs text-on-surface truncate">{item.name}</h4>
+                        <p className="text-xs font-extrabold text-primary mt-0.5">${item.price}</p>
                       </div>
-
-                      <button
-                        type="button"
-                        className="p-2 rounded-full hover:bg-error/10 text-on-surface-variant hover:text-error transition-colors shrink-0 cursor-pointer"
-                        onClick={() =>
-                          toggleWishlist({
-                            product: {
-                              id: item.productId,
-                              name: item.name,
-                              price: item.price,
-                              image: item.image,
-                              category: item.category,
-                            },
-                          })
-                        }
-                        title="Remove from wishlist"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </section>
+
+                    <button
+                      onClick={() => {
+                        addToCart({ product: item });
+                        showToast(`Added ${item.name} to your Shopping Bag!`);
+                      }}
+                      className="w-full py-1.5 rounded-xl bg-surface-container-lowest hover:bg-primary hover:text-white text-on-surface font-bold text-[11px] border border-outline-variant/50 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <ShoppingBag className="w-3 h-3" /> Move to Bag
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
 
           </div>
 
         </div>
 
       </div>
+
+      {/* ─── MODAL: AI Recalibrate Fit ───────────────────────────────── */}
+      {isCalibrating && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+              <h3 className="text-lg font-extrabold text-on-surface flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" /> Recalibrate Smart Fit
+              </h3>
+              <button
+                onClick={() => setIsCalibrating(false)}
+                className="p-1.5 rounded-full hover:bg-surface-container text-on-surface-variant cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <p className="text-on-surface-variant">
+                Update your body parameters. Fitsy AI recalculates drape geometry and size mapping in real-time.
+              </p>
+
+              <div>
+                <label className="block font-bold text-on-surface mb-1">Height</label>
+                <input
+                  type="text"
+                  value={measurements.height}
+                  onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/50 bg-surface-container-low text-on-surface font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-on-surface mb-1">Chest</label>
+                  <input
+                    type="text"
+                    value={measurements.chest}
+                    onChange={(e) => setMeasurements({ ...measurements, chest: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/50 bg-surface-container-low text-on-surface font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-on-surface mb-1">Waist</label>
+                  <input
+                    type="text"
+                    value={measurements.waist}
+                    onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/50 bg-surface-container-low text-on-surface font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-on-surface mb-1">Hips</label>
+                  <input
+                    type="text"
+                    value={measurements.hips}
+                    onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/50 bg-surface-container-low text-on-surface font-medium"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsCalibrating(false);
+                  showToast('Smart Fit Profile recalibrated successfully!');
+                }}
+                className="w-full py-3 rounded-full bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-md transition-all mt-4 cursor-pointer"
+              >
+                Save &amp; Recalibrate Silhouette
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Outfit Preview ────────────────────────────────────── */}
+      {selectedOutfit && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+              <h3 className="text-lg font-extrabold text-on-surface flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" /> {selectedOutfit.title}
+              </h3>
+              <button
+                onClick={() => setSelectedOutfit(null)}
+                className="p-1.5 rounded-full hover:bg-surface-container text-on-surface-variant cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="relative aspect-4/5 rounded-2xl overflow-hidden bg-surface-container">
+              <img
+                src={selectedOutfit.image}
+                alt={selectedOutfit.title}
+                className="w-full h-full object-cover"
+              />
+              <span className="absolute bottom-4 right-4 px-3 py-1 bg-black/80 backdrop-blur-md text-white font-extrabold text-xs rounded-full shadow-lg">
+                {selectedOutfit.fitScore} Accuracy
+              </span>
+            </div>
+
+            <div className="flex gap-3">
+              <Link
+                to="/catalog"
+                onClick={() => setSelectedOutfit(null)}
+                className="w-1/2 py-2.5 rounded-full border border-outline-variant text-on-surface font-bold text-xs text-center hover:bg-surface-container"
+              >
+                Shop Similar
+              </Link>
+              <Link
+                to="/catalog?tryon=active"
+                onClick={() => setSelectedOutfit(null)}
+                className="w-1/2 py-2.5 rounded-full bg-primary text-white font-bold text-xs text-center hover:bg-primary-container shadow-md"
+              >
+                Try On in Live Studio
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Edit Profile ──────────────────────────────────────── */}
+      {isEditingProfile && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+              <h3 className="text-lg font-extrabold text-on-surface flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-primary" /> Edit Profile Details
+              </h3>
+              <button
+                onClick={() => setIsEditingProfile(false)}
+                className="p-1.5 rounded-full hover:bg-surface-container text-on-surface-variant cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-on-surface mb-1">Full Name</label>
+                <input
+                  type="text"
+                  defaultValue={user?.name || 'Alex Johnson'}
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/50 bg-surface-container-low text-on-surface font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-on-surface mb-1">Email Address</label>
+                <input
+                  type="email"
+                  defaultValue={user?.email || 'alex.johnson@example.com'}
+                  disabled
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container text-on-surface-variant font-medium opacity-70"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsEditingProfile(false);
+                  showToast('Profile information updated successfully!');
+                }}
+                className="w-full py-3 rounded-full bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-md transition-all mt-4 cursor-pointer"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

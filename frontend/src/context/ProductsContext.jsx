@@ -34,7 +34,9 @@ export function ProductsProvider({ children }) {
     }
 
     if (data?.products && Array.isArray(data.products) && data.products.length > 0) {
-      setProducts(data.products);
+      const existingNames = new Set(data.products.map((p) => p.name.toLowerCase()));
+      const remainingStatic = PRODUCTS.filter((p) => !existingNames.has(p.name.toLowerCase()));
+      setProducts([...data.products, ...remainingStatic]);
     }
   };
 

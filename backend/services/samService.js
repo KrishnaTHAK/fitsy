@@ -10,8 +10,9 @@ function estimateBodyPositionWithSAM2(imageInput) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, '..', 'utils', 'samSegmenter.py');
 
-    // Spawn Python 3 child process
-    const pythonProc = spawn('python3', [scriptPath], {
+    // Spawn Python child process cross-platform
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+    const pythonProc = spawn(pythonCmd, [scriptPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
