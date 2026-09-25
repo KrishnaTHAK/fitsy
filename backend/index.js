@@ -2,9 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
+const path = require('path');
 
 // Load env vars FIRST before requiring local modules that use them
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const connectDB = require('./config/db');
 const { handleStripeWebhook } = require('./controllers/webhookController');

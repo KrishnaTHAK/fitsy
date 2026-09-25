@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const path = require('path');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const Product = require('./models/Product');
@@ -6,7 +7,7 @@ const User = require('./models/User');
 const Cart = require('./models/Cart');
 const Wishlist = require('./models/Wishlist');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 connectDB();
 
 const rawProducts = [

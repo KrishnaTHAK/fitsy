@@ -187,9 +187,10 @@ export function AuthProvider({ children }) {
     } catch {
       // Ignore
     }
-    // Preserve theme preference; clear everything else fitsy-prefixed
+    // Preserve persistent account + cart/wishlist state for the same user.
+    // Only end the active session.
     const theme = localStorage.getItem('fitsy-theme');
-    safeStorageClearAll();
+    safeStorageRemove(USER_STORAGE_KEY);
     if (theme) localStorage.setItem('fitsy-theme', theme);
     persistUserSession(null);
   }
