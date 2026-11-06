@@ -17,6 +17,20 @@ const REALISTIC_RANGES = {
 
 const CM_PER_INCH = 2.54;
 
+// Measurements that can be matched against a size chart. Height and weight are
+// validated and may be saved to a fit profile, but are NOT used for matching:
+// a body-measurement chart cannot be compared to height or weight reliably.
+const MATCHABLE_DIMENSIONS = ['chest', 'waist', 'hip', 'shoulder'];
+
+// A measurement more than this far beyond the largest (or below the smallest)
+// size's range is reported as "no suitable size" instead of a weak guess.
+const OUT_OF_RANGE_TOLERANCE_CM = 2;
+
+// Only these categories use numeric size labels that ARE a waist measurement
+// in inches. Other numeric-sized products (for example shoes) are not
+// body-measurement matchable and must not be treated like trousers.
+const NUMERIC_WAIST_CATEGORIES = ['Bottoms'];
+
 /**
  * Validates raw measurement input. Returns { valid, errors, measurements }
  * where `measurements` only contains the fields that were both provided and
@@ -86,29 +100,52 @@ function scoreMeasurementAgainstRange(value, min, max, bias) {
   return Math.max(0, 0.7 - penalty * 0.5);
 }
 
+function isNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 /**
- * @param {{chest?, waist?, hip?}} measurements - already validated, cm
- * @param {Array<{size, chestMin, chestMax, waistMin, waistMax, hipMin, hipMax}>} sizeChart
- * @param {string} fitPreference - 'slim' | 'regular' | 'relaxed' | 'oversized'
- * @param {string[]} availableSizes - product.sizes, to filter the chart to what's actually purchasable
+ * Which measurements this chart actually defines (min AND max present on at
+ * least one available size). This is what makes the recommendation compare
+ * only RELEVANT measurements: a tops chart with chest + shoulder never looks
+ * at hip, and the caller can tell the user which fields matter.
+ */
+function getChartDimensions(entries) {
+  return MATCHABLE_DIMENSIONS.filter((dim) =>
+    entries.some((entry) => isNumber(entry[`${dim}Min`]) && isNumber(entry[`${dim}Max`]))
+  );
+}
+
+/**
+ * @param {Object} measurements - validated user measurements (cm)
+ * @param {Array} sizeChart - product.sizeChart entries
+ * @param {string} fitPreference
+ * @param {string[]} availableSizes - product.sizes (what can actually be bought)
  */
 function matchFromSizeChart(measurements, sizeChart, fitPreference, availableSizes) {
   const bias = FIT_PREFERENCE_BIAS[fitPreference] ?? FIT_PREFERENCE_BIAS.regular;
-  const relevantDimensions = ['chest', 'waist', 'hip'].filter((dim) => measurements[dim] !== undefined);
+  const availableSet = new Set(availableSizes || []);
+  const entries = sizeChart.filter((entry) => availableSet.size === 0 || availableSet.has(entry.size));
 
-  if (relevantDimensions.length === 0) {
-    return { candidates: [], usedDimensions: [] };
+  const chartDimensions = getChartDimensions(entries);
+  const usedDimensions = chartDimensions.filter((dim) => measurements[dim] !== undefined);
+
+  if (usedDimensions.length === 0) {
+    return { candidates: [], usedDimensions, chartDimensions, bounds: {}, order: {} };
   }
 
-  const availableSet = new Set(availableSizes || []);
-  const candidates = sizeChart
-    .filter((entry) => availableSet.size === 0 || availableSet.has(entry.size))
+  const order = {};
+  entries.forEach((entry, index) => {
+    order[entry.size] = index;
+  });
+
+  const candidates = entries
     .map((entry) => {
       const dimensionResults = {};
       let totalScore = 0;
       let scoredDimensions = 0;
 
-      for (const dim of relevantDimensions) {
+      for (const dim of usedDimensions) {
         const min = entry[`${dim}Min`];
         const max = entry[`${dim}Max`];
         const score = scoreMeasurementAgainstRange(measurements[dim], min, max, bias);
@@ -136,25 +173,41 @@ function matchFromSizeChart(measurements, sizeChart, fitPreference, availableSiz
     .filter(Boolean)
     .sort((a, b) => b.score - a.score);
 
-  return { candidates, usedDimensions: relevantDimensions };
+  // Overall span of the chart per dimension, used to detect "bigger than the
+  // largest size" / "smaller than the smallest size".
+  const bounds = {};
+  for (const dim of usedDimensions) {
+    const defined = entries.filter((e) => isNumber(e[`${dim}Min`]) && isNumber(e[`${dim}Max`]));
+    bounds[dim] = {
+      min: Math.min(...defined.map((e) => e[`${dim}Min`])),
+      max: Math.max(...defined.map((e) => e[`${dim}Max`])),
+    };
+  }
+
+  return { candidates, usedDimensions, chartDimensions, bounds, order };
 }
 
 /**
- * Numeric-waist categories (e.g. jeans sized "24"–"32") store the waist
- * measurement directly as the size label — no separate chart needed. We
- * match the user's waist (cm, converted to inches — these labels are
- * conventionally inches) to the closest available numeric size.
+ * Numeric-waist Bottoms (e.g. jeans sized "24" to "32") use the waist in
+ * inches as the size label, so no separate chart is needed. The user's waist
+ * (cm) is converted to inches and matched to the closest available size.
  */
 function matchNumericWaistSize(measurements, availableSizes) {
-  if (measurements.waist === undefined) return { candidates: [] };
+  const chartDimensions = ['waist'];
+  if (measurements.waist === undefined) {
+    return { candidates: [], usedDimensions: [], chartDimensions, bounds: {}, order: {} };
+  }
 
-  const numericSizes = availableSizes
-    .map((s) => Number(s))
-    .filter((n) => !Number.isNaN(n));
-
-  if (numericSizes.length === 0) return { candidates: [] };
+  const numericSizes = availableSizes.map((s) => Number(s)).filter((n) => !Number.isNaN(n));
+  if (numericSizes.length === 0) {
+    return { candidates: [], usedDimensions: [], chartDimensions, bounds: {}, order: {} };
+  }
 
   const userWaistInches = measurements.waist / CM_PER_INCH;
+  const order = {};
+  [...numericSizes].sort((a, b) => a - b).forEach((n, index) => {
+    order[String(n)] = index;
+  });
 
   const candidates = numericSizes
     .map((sizeInches) => {
@@ -178,46 +231,85 @@ function matchNumericWaistSize(measurements, availableSizes) {
     })
     .sort((a, b) => b.score - a.score);
 
-  return { candidates, usedDimensions: ['waist'] };
+  const bounds = {
+    waist: {
+      min: (Math.min(...numericSizes) - 0.5) * CM_PER_INCH,
+      max: (Math.max(...numericSizes) + 0.5) * CM_PER_INCH,
+    },
+  };
+
+  return { candidates, usedDimensions: ['waist'], chartDimensions, bounds, order };
 }
 
-function scoreToConfidence(topCandidate, secondCandidate) {
-  if (!topCandidate) return 'low';
-  const { score, allMatch, matchedDimensions } = topCandidate;
-
-  if (allMatch && matchedDimensions >= 2 && score >= 0.85) {
-    // Clearly best, and not a near-tie with the runner-up
-    if (!secondCandidate || score - secondCandidate.score >= 0.1) return 'high';
-    return 'medium';
+/** First dimension (if any) that is beyond the chart's overall span by more than the tolerance. */
+function findOutOfRange(measurements, usedDimensions, bounds) {
+  for (const dim of usedDimensions) {
+    const value = measurements[dim];
+    const span = bounds[dim];
+    if (!span) continue;
+    if (value > span.max + OUT_OF_RANGE_TOLERANCE_CM) return { dimension: dim, direction: 'above' };
+    if (value < span.min - OUT_OF_RANGE_TOLERANCE_CM) return { dimension: dim, direction: 'below' };
   }
-  if (allMatch || score >= 0.65) return 'medium';
-  return 'low';
+  return null;
+}
+
+/**
+ * Confidence is derived from match quality, never invented:
+ *   high   - every compared measurement is inside the size's range, near the
+ *            ideal point, there are enough measurements, and the runner-up is
+ *            clearly worse
+ *   medium - inside the range but near an edge, or a close runner-up
+ *   low    - at least one measurement outside the range
+ * It is also capped at medium when the user did not supply every measurement
+ * the chart uses (incomplete input).
+ */
+function scoreToConfidence(top, second, { requiredDimensions, incomplete }) {
+  if (!top) return 'low';
+  const { score, allMatch, matchedDimensions } = top;
+
+  let confidence;
+  if (allMatch && matchedDimensions >= requiredDimensions && score >= 0.85) {
+    confidence = !second || score - second.score >= 0.1 ? 'high' : 'medium';
+  } else if (allMatch || score >= 0.65) {
+    confidence = 'medium';
+  } else {
+    confidence = 'low';
+  }
+
+  if (incomplete && confidence === 'high') confidence = 'medium';
+  return confidence;
+}
+
+function dimensionList(dimensions) {
+  if (dimensions.length <= 1) return dimensions.join('');
+  return `${dimensions.slice(0, -1).join(', ')} or ${dimensions[dimensions.length - 1]}`;
 }
 
 /**
  * Main entry point.
- * @param {object} product - full product document (needs sizes, sizeChart, category)
- * @param {object} rawMeasurements - user-submitted measurements
- * @param {string} fitPreference
- * @returns {{status:'ok'|'no_chart'|'invalid'|'no_match', ...}}
+ * @param {object} product - needs sizes, sizeChart, category
+ * @param {object} rawMeasurements - user-submitted measurements (cm / kg)
+ * @param {string} fitPreference - slim | regular | relaxed | oversized
+ * @returns {{status: 'ok'|'no_chart'|'invalid'|'no_match', ...}}
  */
 function recommendSize({ product, rawMeasurements, fitPreference = 'regular' }) {
   const { valid, errors, measurements } = validateMeasurements(rawMeasurements);
   if (!valid) {
     return { status: 'invalid', errors };
   }
-  if (Object.keys(measurements).length === 0) {
-    return { status: 'invalid', errors: ['At least one measurement (chest, waist, or hip) is required.'] };
-  }
 
+  const sizes = product.sizes || [];
   const hasChart = Array.isArray(product.sizeChart) && product.sizeChart.length > 0;
-  const isNumericWaistProduct = (product.sizes || []).every((s) => !Number.isNaN(Number(s)));
+  const isNumericWaistProduct =
+    NUMERIC_WAIST_CATEGORIES.includes(product.category) &&
+    sizes.length > 0 &&
+    sizes.every((s) => !Number.isNaN(Number(s)));
 
   let matchResult;
   if (hasChart) {
-    matchResult = matchFromSizeChart(measurements, product.sizeChart, fitPreference, product.sizes);
+    matchResult = matchFromSizeChart(measurements, product.sizeChart, fitPreference, sizes);
   } else if (isNumericWaistProduct) {
-    matchResult = matchNumericWaistSize(measurements, product.sizes);
+    matchResult = matchNumericWaistSize(measurements, sizes);
   } else {
     return {
       status: 'no_chart',
@@ -225,16 +317,28 @@ function recommendSize({ product, rawMeasurements, fitPreference = 'regular' }) 
     };
   }
 
-  const { candidates, usedDimensions } = matchResult;
+  const { candidates, usedDimensions, chartDimensions, bounds, order } = matchResult;
 
   if (candidates.length === 0) {
     return {
       status: 'invalid',
-      errors: [`Please provide ${isNumericWaistProduct ? 'a waist' : 'at least one of chest, waist, or hip'} measurement for this product.`],
+      errors: [
+        `This product's size chart uses ${chartDimensions.join(', ')}. Please enter at least one of: ${dimensionList(chartDimensions)}.`,
+      ],
     };
   }
 
   const [top, second] = candidates;
+
+  const outOfRange = findOutOfRange(measurements, usedDimensions, bounds);
+  if (outOfRange) {
+    const edge = outOfRange.direction === 'above' ? 'largest' : 'smallest';
+    return {
+      status: 'no_match',
+      message: `Your ${outOfRange.dimension} measurement is ${outOfRange.direction === 'above' ? 'above' : 'below'} the ${edge} available size for this product. Please check the product's sizing information or consider a different product.`,
+      closestSize: top.size,
+    };
+  }
 
   if (top.score < 0.25) {
     return {
@@ -244,39 +348,87 @@ function recommendSize({ product, rawMeasurements, fitPreference = 'regular' }) 
     };
   }
 
-  const confidence = scoreToConfidence(top, second);
+  const incomplete = usedDimensions.length < chartDimensions.length;
+  const confidence = scoreToConfidence(top, second, {
+    requiredDimensions: Math.min(2, chartDimensions.length),
+    incomplete,
+  });
+
   const alternative =
     second && Math.abs(second.score - top.score) < 0.12 && second.size !== top.size ? second.size : null;
+
+  let alternativeReason = null;
+  if (alternative) {
+    const fitsLooser = order[alternative] > order[top.size];
+    alternativeReason = `${top.size} is the closest measurement match. ${alternative} may fit ${fitsLooser ? 'looser' : 'closer to the body'}.`;
+  }
 
   return {
     status: 'ok',
     recommendedSize: top.size,
     confidence,
     alternative,
+    incomplete,
     usedDimensions,
+    chartDimensions,
     measurementBreakdown: top.dimensionResults,
-    alternativeReason: alternative
-      ? `${top.size} is the closest measurement match. ${alternative} may provide a looser fit.`
-      : null,
+    alternativeReason,
   };
 }
 
-function buildDeterministicReason({ recommendedSize, measurementBreakdown, alternative, alternativeReason }) {
+function buildDeterministicReason({ recommendedSize, measurementBreakdown, alternative, alternativeReason, incomplete }) {
   const matchedDims = Object.entries(measurementBreakdown || {})
     .filter(([, d]) => d.match)
     .map(([dim]) => dim);
 
+  let base;
   if (matchedDims.length === 0) {
-    return `${recommendedSize} is the closest available match based on your measurements.`;
+    base = `${recommendedSize} is the best available match based on your measurements.`;
+  } else {
+    const dimList =
+      matchedDims.length === 1
+        ? matchedDims[0]
+        : `${matchedDims.slice(0, -1).join(', ')} and ${matchedDims[matchedDims.length - 1]}`;
+    base = `Your ${dimList} measurement${matchedDims.length > 1 ? 's' : ''} fall within the ${recommendedSize} size range for this product.`;
   }
-  const dimList = matchedDims.length === 1 ? matchedDims[0] : `${matchedDims.slice(0, -1).join(', ')} and ${matchedDims[matchedDims.length - 1]}`;
-  const base = `Your ${dimList} measurement${matchedDims.length > 1 ? 's' : ''} fall within the ${recommendedSize} size range for this product.`;
-  return alternative ? `${base} ${alternativeReason}` : base;
+
+  const parts = [base];
+  if (alternative && alternativeReason) parts.push(alternativeReason);
+  if (incomplete) parts.push('Add your other measurements for a more reliable result.');
+  return parts.join(' ');
+}
+
+/**
+ * What the optional AI explanation is allowed to see. Body measurements are
+ * personal data, so the raw values the user typed are NOT sent to the AI
+ * provider: only the chosen size, confidence, the size's own chart range
+ * (product data, not personal), and whether each measurement fell within,
+ * below or above that range.
+ */
+function buildAiSafeSummary(result) {
+  const dimensions = {};
+  for (const [dim, d] of Object.entries(result.measurementBreakdown || {})) {
+    dimensions[dim] = {
+      position: d.user < d.min ? 'below' : d.user > d.max ? 'above' : 'within',
+      sizeRange: `${d.min}-${d.max} cm`,
+    };
+  }
+  return {
+    recommendedSize: result.recommendedSize,
+    confidence: result.confidence,
+    alternative: result.alternative,
+    incomplete: Boolean(result.incomplete),
+    dimensions,
+  };
 }
 
 module.exports = {
   validateMeasurements,
   recommendSize,
   buildDeterministicReason,
+  buildAiSafeSummary,
+  getChartDimensions,
   REALISTIC_RANGES,
+  MATCHABLE_DIMENSIONS,
+  OUT_OF_RANGE_TOLERANCE_CM,
 };

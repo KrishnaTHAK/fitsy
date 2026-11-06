@@ -140,10 +140,10 @@ module.exports = { getOutfitRecommendation };
 // the size recommendation itself never depends on this succeeding.
 
 const SIZE_EXPLANATION_SYSTEM_PROMPT = `You explain clothing size recommendations for an online store called FitSy.
-You will be given a size that was ALREADY determined by a measurement-matching algorithm, plus the measurement comparison data behind it.
-Write a short (1-2 sentence), warm, honest explanation of why this size fits, referencing the specific measurements that matched.
-Never say "guaranteed fit" or "perfect fit" — use language like "recommended", "best match", or "likely fit".
-Do not suggest a different size than the one given. Do not invent measurements not provided.
+You will be given a size that was ALREADY determined by a measurement-matching algorithm, plus, for each body measurement, only whether it falls "within", "below" or "above" that size's range and what the size's range is. You never see the shopper's exact measurements.
+Write a short (1-2 sentence), warm, honest explanation of why this size was recommended.
+Never say "guaranteed fit" or "perfect fit" - use language like "recommended", "best match", or "likely fit". Make clear it is an estimate based on the measurements provided.
+Do not suggest a different size than the one given. Do not invent measurements or numbers. If "incomplete" is true, suggest adding the remaining measurements.
 Respond with ONLY a JSON object: { "reason": "string" }`;
 
 /**

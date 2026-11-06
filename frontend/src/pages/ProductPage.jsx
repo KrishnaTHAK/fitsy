@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Heart, ShoppingBag, Sparkles, Star, ShieldCheck, Truck, RotateCcw, Check, Ruler, Info } from 'lucide-react';
 import GarmentTryOn from '../components/GarmentTryOn';
 import SizeRecommendationModal from '../components/SizeRecommendationModal';
+import { supportsSizeRecommendation } from '../utils/sizeChart';
 import { useAuth } from '../context/AuthContext';
 import { useProducts } from '../context/ProductsContext';
 import { useStore } from '../context/StoreContext';
@@ -172,12 +173,14 @@ export default function ProductPage() {
                     Select Size
                   </label>
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setShowSizeRecommendation(true)}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      📏 Find My Size
-                    </button>
+                    {supportsSizeRecommendation(product) && (
+                      <button
+                        onClick={() => setShowSizeRecommendation(true)}
+                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        📏 Find My Size
+                      </button>
+                    )}
                     <button
                       onClick={() => setShowSizeGuide(true)}
                       className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
@@ -191,6 +194,7 @@ export default function ProductPage() {
                   {product.sizes?.map((size) => (
                     <button
                       key={size}
+                      aria-pressed={selectedSize === size}
                       onClick={() => setSelectedSize(size)}
                       className={`py-3 rounded-xl text-sm font-bold border transition-all cursor-pointer ${
                         selectedSize === size
@@ -408,7 +412,7 @@ export default function ProductPage() {
       )}
 
       {/* AI Size Recommendation Modal */}
-      {showSizeRecommendation && (
+      {showSizeRecommendation && supportsSizeRecommendation(product) && (
         <SizeRecommendationModal
           product={product}
           onClose={() => setShowSizeRecommendation(false)}

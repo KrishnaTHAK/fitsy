@@ -535,24 +535,11 @@ let memoryProducts = [
 ];
 
 // ─── Size charts (cm) for the in-memory fallback catalog ──────────────────
-// Same standard letter-size chart used in seed.js — kept in sync so the
-// Size Recommendation feature works identically whether MongoDB is
-// connected or the app is running in standalone/memory mode. Only applied
-// to products whose sizes are exactly a subset of the known letter sizes
-// (excludes 'One Size' accessories, numeric-waist Bottoms, etc.).
-const MEMORY_LETTER_SIZE_CHART = [
-  { size: 'XS', chestMin: 78, chestMax: 84, waistMin: 62, waistMax: 68, hipMin: 86, hipMax: 90 },
-  { size: 'S', chestMin: 84, chestMax: 90, waistMin: 68, waistMax: 74, hipMin: 90, hipMax: 96 },
-  { size: 'M', chestMin: 90, chestMax: 98, waistMin: 74, waistMax: 82, hipMin: 96, hipMax: 104 },
-  { size: 'L', chestMin: 98, chestMax: 106, waistMin: 82, waistMax: 90, hipMin: 104, hipMax: 112 },
-  { size: 'XL', chestMin: 106, chestMax: 114, waistMin: 90, waistMax: 98, hipMin: 112, hipMax: 120 },
-];
-const MEMORY_KNOWN_LETTER_SIZES = new Set(['XS', 'S', 'M', 'L', 'XL']);
+// Same per-category reference charts as seed.js (shared via data/sizeCharts.js),
+// so Size Recommendation behaves identically with or without MongoDB.
+const { buildSizeChart } = require('../data/sizeCharts');
 memoryProducts.forEach((product) => {
-  const isLetterSized = product.sizes?.length > 0 && product.sizes.every((s) => MEMORY_KNOWN_LETTER_SIZES.has(s));
-  if (isLetterSized) {
-    product.sizeChart = MEMORY_LETTER_SIZE_CHART.filter((entry) => product.sizes.includes(entry.size));
-  }
+  product.sizeChart = buildSizeChart(product.category, product.sizes);
 });
 
 // @desc    Fetch all products

@@ -26,6 +26,8 @@ const productSchema = new mongoose.Schema(
           waistMax: Number,
           hipMin: Number,
           hipMax: Number,
+          shoulderMin: Number,
+          shoulderMax: Number,
         },
       ],
       default: [],

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const { getAllProductsInternal } = require('./productController');
-const { recommendSize, buildDeterministicReason } = require('../services/sizeRecommendationService');
+const { recommendSize, buildDeterministicReason, buildAiSafeSummary } = require('../services/sizeRecommendationService');
 const { explainSizeFit } = require('../services/aiStylistService');
 
 const isDbReady = () => mongoose.connection.readyState === 1;
@@ -28,7 +28,7 @@ const getSizeRecommendation = async (req, res) => {
   const { productId, measurements, fitPreference } = req.body || {};
 
   if (!productId || typeof productId !== 'string') {
-    return res.status(400).json({ success: false, message: 'A productId is required.' });
+    return res.status(400).json({ success: false, message: 'A valid productId is required.' });
   }
   if (!measurements || typeof measurements !== 'object') {
     return res.status(400).json({ success: false, message: 'Measurements are required.' });
@@ -76,14 +76,19 @@ const getSizeRecommendation = async (req, res) => {
   }
 
   let reason = buildDeterministicReason(result);
-  try {
-    const aiReason = await explainSizeFit(result);
-    if (aiReason) reason = aiReason;
-  } catch (error) {
-    // AI phrasing is a nice-to-have. The recommendation itself was already
-    // computed deterministically above, so we fail open here and just keep
-    // the deterministic reason text.
-    console.warn('[getSizeRecommendation] AI explanation unavailable, using deterministic reason:', error.message);
+
+  // The AI only rephrases a result that is already decided, and it only ever
+  // receives a redacted summary (no raw body measurements, see
+  // buildAiSafeSummary). Set SIZE_AI_EXPLANATION=false to turn it off entirely.
+  if (process.env.SIZE_AI_EXPLANATION !== 'false') {
+    try {
+      const aiReason = await explainSizeFit(buildAiSafeSummary(result));
+      if (aiReason) reason = aiReason;
+    } catch (error) {
+      // Nice-to-have only: the recommendation was already computed
+      // deterministically above, so keep the deterministic reason.
+      console.warn('[getSizeRecommendation] AI explanation unavailable, using deterministic reason:', error.message);
+    }
   }
 
   return res.status(200).json({
@@ -93,6 +98,7 @@ const getSizeRecommendation = async (req, res) => {
       recommendedSize: result.recommendedSize,
       confidence: result.confidence,
       alternative: result.alternative,
+      incomplete: result.incomplete,
       reason,
       measurementBreakdown: result.measurementBreakdown,
     },

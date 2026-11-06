@@ -65,13 +65,11 @@
 * Outfit results plug straight into the existing **cart**, **wishlist**, and **virtual try-on** flows — no parallel systems.
 
 ### 📏 7. AI Size Recommendation
-* **Deterministic measurement matching, not a guess**: given a shopper's chest/waist/hip measurements, the backend compares them directly against the *selected product's own* size chart — every recommendation is driven by real per-product data stored on the product, never a universal S/M/L table.
-* **AI never picks the size.** The matching algorithm (`sizeRecommendationService.js`) is a pure, testable function with zero AI calls. Groq is used *only* to rephrase an already-computed result into a warmer sentence — if the AI call fails, the deterministic explanation is used instead and the recommendation itself is unaffected.
-* Supports **letter-sized** apparel (chest/waist/hip range charts, cm) and **numeric-waist** items like jeans (direct waist-measurement matching, e.g. a 71cm waist → size "28").
-* **Fit Preference** (Slim / Regular / Relaxed / Oversized) nudges which part of a valid range is treated as ideal — it can shift *which* real size is favored near a boundary, but can never invent a size the chart doesn't have.
-* Honest by design: confidence is reported as **High / Medium / Low** based on actual match quality (never a fabricated percentage), and products without chart data return a clear "no size chart available" message instead of a fake answer.
-* Optional **My Fit Profile**: logged-in users can save their measurements once and reuse them across products via "Use My Saved Measurements."
-* Selecting a recommended size populates the **existing** product-page size selector — "Add to Cart" is untouched.
+* **Deterministic, explainable matching.** The size is always chosen by comparing the shopper's measurements with the *selected product's own* size chart in MongoDB. No AI decides the size. Groq (optional) only rephrases an explanation that was already computed, and it never sees the raw measurements (see [Privacy](#privacy)).
+* **Only relevant measurements.** Each chart defines which measurements matter for that garment (tops: chest and shoulder; dresses: chest, waist and hip). The form shows only those fields, and anything else is ignored.
+* **Honest results.** Confidence is High / Medium / Low, derived from match quality. A shopper whose measurements are clearly outside the available sizes is told so, instead of being given a weak guess. Products without a usable chart show no button at all.
+* **Fit preference** (Slim, Regular, Relaxed, Oversized) shifts which part of a size's range counts as ideal. It can change which real size wins near a boundary, but it can never invent a size that is not in the chart.
+* **Plugs into what already exists.** "Select M" calls the product page's existing `setSelectedSize`; Add to Shopping Bag, the cart and checkout are untouched. Logged-in users can save measurements to a reusable fit profile.
 
 ---
 
@@ -280,6 +278,8 @@ Ensure you have the following installed on your machine:
    ```bash
    node seed.js
    ```
+   > `seed.js` deletes all existing products, users, carts and wishlists before inserting. Use it only on a database you can wipe. To add size charts to existing products without wiping anything, see [Existing databases](#existing-databases-add-size-charts-without-re-seeding).
+
 
 6. Start the backend development server:
    ```bash
@@ -437,20 +437,20 @@ On failure (`success: false`), `message` explains what went wrong (invalid input
 ### 📏 Size Recommendation (`/api/size-recommendation`)
 | Method | Endpoint | Description | Access |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/size-recommendation` | Recommend a size from real measurements + the product's real size chart | Public |
-| `PUT` | `/api/auth/fit-profile` | Save the logged-in user's measurements for reuse across products | Private |
+| `POST` | `/api/size-recommendation` | Recommend a size from measurements + the product's real size chart | Public |
+| `PUT` | `/api/auth/fit-profile` | Save the logged-in user's measurements for reuse | Private |
 
 **Request body:**
 ```json
 {
   "productId": "64f...",
-  "measurements": { "height": 178, "weight": 72, "chest": 96, "waist": 81, "hip": 96 },
+  "measurements": { "chest": 96, "shoulder": 44 },
   "fitPreference": "regular"
 }
 ```
-`productId` and `measurements` are required (at least one of chest/waist/hip). `fitPreference` is one of `slim | regular | relaxed | oversized`, defaults to `regular`.
+`productId` must be the product's string `_id` from the backend. `measurements` accepts `chest`, `waist`, `hip`, `shoulder` (cm) and optionally `height` (cm) and `weight` (kg). Only the measurements the product's chart uses are compared; height and weight are validated but not used for matching. `fitPreference` is `slim | regular | relaxed | oversized` (default `regular`).
 
-**Response body (successful match):**
+**Response body (a match):**
 ```json
 {
   "success": true,
@@ -459,17 +459,59 @@ On failure (`success: false`), `message` explains what went wrong (invalid input
     "recommendedSize": "M",
     "confidence": "high",
     "alternative": null,
-    "reason": "Your chest and waist measurements fall within the M size range for this product.",
+    "incomplete": false,
+    "reason": "Your chest and shoulder measurements fall within the M size range for this product.",
     "measurementBreakdown": {
       "chest": { "user": 96, "min": 90, "max": 98, "match": true },
-      "waist": { "user": 81, "min": 74, "max": 82, "match": true }
+      "shoulder": { "user": 44, "min": 42, "max": 44, "match": true }
     }
   }
 }
 ```
-Other `data.status` values: `no_chart` (product has no measurement data yet) and `no_match` (measurements fall outside every available size). `success: false` responses cover invalid input (e.g. an unrealistic or non-numeric measurement) and unknown products.
+Other `data.status` values: `no_chart` (no usable size chart for this product) and `no_match` (measurements are beyond the largest or smallest available size, or fit no size). Errors use `success: false` with a `message`: `400` for invalid or missing measurements or a malformed `productId`, `404` for an unknown product.
 
-**Limitations:** this feature estimates a likely size from self-reported measurements and each product's stored size chart — it is not a body scan, does not use a camera, and is not a guaranteed or perfect fit. Size chart data for the demo catalog is standard ready-to-wear reference data, not manufacturer-verified per garment. Always treat the result as a starting recommendation, same as any online size guide.
+#### How the recommendation works
+
+1. **Load the product** by `_id` (the backend is the only source of truth; the client never sends a chart or a computed size).
+2. **Validate** every value against realistic ranges (for example chest 50-180 cm, shoulder 25-70 cm).
+3. **Pick the relevant measurements:** those the user entered *and* the chart defines. If none apply, the request is rejected with a message naming the fields that matter.
+4. **Score each available size.** For each compared measurement: inside the size's range scores 0.7-1.0 depending on how close it is to the *ideal point* for the fit preference (25% / 50% / 70% / 85% of the range for slim / regular / relaxed / oversized); outside the range it scores `0.7 - 0.5 x (distance / range width)`, floored at 0. A size's score is the average over the compared measurements.
+5. **Reject impossible fits.** If a measurement is more than 2 cm above the largest size or below the smallest, the result is `no_match`. So is a best score below 0.25.
+6. **Choose the size** with the highest score. If the runner-up is within 0.12, it is returned as `alternative` (described as fitting looser or closer to the body depending on direction).
+7. **Confidence:** *High* needs every compared measurement inside the range, a score of at least 0.85, at least two measurements (or all of them if the chart only has one), and a runner-up at least 0.1 behind. *Medium* means inside the range but near an edge, or a close runner-up. *Low* means at least one measurement is outside the range. Confidence is capped at *Medium* if the user did not enter every measurement the chart uses (`incomplete: true`).
+
+**Numeric-sized Bottoms** (labels such as `28`, `30`) use the waist in inches as the size label, so the user's waist is converted from cm and matched directly. This applies only to the `Bottoms` category: other numeric-sized products, such as shoes, have no body-measurement chart.
+
+**Required measurements by category (demo catalog):**
+
+| Category | Chart uses |
+| :--- | :--- |
+| Tops, Outerwear | chest, shoulder |
+| Dresses | chest, waist, hip |
+| Bottoms (numeric sizes) | waist |
+| Shoes, Accessories | none (no size recommendation) |
+
+A product can define any subset of `chest`, `waist`, `hip`, `shoulder` on each `sizeChart` entry (`chestMin`/`chestMax`, and so on). Garment length is not modelled, because there is no body measurement to compare it with.
+
+#### Privacy
+Body measurements are personal data. They are validated and used in the request, never written to server logs, and stored only if a logged-in user ticks "save to my profile". When the optional AI explanation is on, only the chosen size, the confidence, the size's own chart ranges and whether each measurement was within, below or above that range are sent to Groq; the exact values are not. Set `SIZE_AI_EXPLANATION=false` in `backend/.env` to turn the AI explanation off completely. The recommendation itself does not change.
+
+#### Existing databases: add size charts without re-seeding
+`seed.js` deletes all products, users, carts and wishlists before inserting, so do not re-run it on data you want to keep. To add charts to existing products:
+```bash
+cd backend
+node scripts/backfillSizeCharts.js --dry-run   # list what would change
+node scripts/backfillSizeCharts.js             # apply (only updates products whose chart differs)
+```
+
+#### Testing
+```bash
+cd backend && npm test      # node:test, 55 tests: algorithm, API controller, chart builder, backfill logic
+cd frontend && npm test     # Vitest + React Testing Library: utility, modal, and product-page integration
+```
+The product-page integration test checks that "Select M" updates the existing size selector and that Add to Shopping Bag then receives that size.
+
+**Limitations:** this estimates a likely size from self-reported measurements and a stored size chart. It is not a body scan and does not guarantee a fit; actual fit varies by brand, fabric and garment cut. The charts in the demo catalog are generic reference ranges, not manufacturer-verified measurements for a specific garment, so replace them with real data per product. Height and weight are not used for matching. "Find My Size" appears only for products that exist in the backend and have a usable chart; products from the built-in static catalog (used when the backend is unreachable) do not show it. A shopper who is between sizes gets a primary size plus an alternative rather than a single certain answer.
 
 ### ⚡ Webhooks (`/api/webhook`)
 | Method | Endpoint | Description | Access |

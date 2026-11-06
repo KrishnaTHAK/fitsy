@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "backfill:size-charts": "node scripts/backfillSizeCharts.js"
   },
   "keywords": [],
   "author": "",

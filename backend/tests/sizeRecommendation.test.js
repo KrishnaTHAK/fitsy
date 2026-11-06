@@ -18,7 +18,7 @@ const LETTER_PRODUCT = {
   ],
 };
 
-const NUMERIC_WAIST_PRODUCT = { sizes: ['24', '26', '28', '30', '32'], sizeChart: [] };
+const NUMERIC_WAIST_PRODUCT = { category: 'Bottoms', sizes: ['24', '26', '28', '30', '32'], sizeChart: [] };
 
 const NO_CHART_PRODUCT = { sizes: ['One Size'], sizeChart: [] };
 
@@ -206,4 +206,72 @@ test('controller: existing Add to Cart contract is untouched (sanity import chec
   // confirms cartController still loads cleanly alongside the new modules.
   const cartController = require('../controllers/cartController.js');
   assert.equal(typeof cartController.addToCart, 'function');
+});
+
+// ─── Phase 2: privacy, id handling ───────────────────────────────────────────
+
+test('controller: the AI explanation never receives the raw measurements the user typed', async () => {
+  let received;
+  const { getSizeRecommendation } = loadControllerWith({
+    product: LETTER_PRODUCT,
+    aiExplain: async (summary) => {
+      received = summary;
+      return 'Friendly explanation.';
+    },
+  });
+  const res = mockRes();
+  // 95.5 and 80.5 are deliberately not numbers that appear in the chart
+  await getSizeRecommendation(
+    { body: { productId: 'prod_test_1', measurements: { chest: 95.5, waist: 80.5 } } },
+    res
+  );
+  assert.equal(res.statusCode, 200);
+  const sent = JSON.stringify(received);
+  assert.ok(!sent.includes('95.5'), 'raw chest value must not be sent to the AI provider');
+  assert.ok(!sent.includes('80.5'), 'raw waist value must not be sent to the AI provider');
+  assert.equal(received.recommendedSize, 'M');
+  assert.equal(received.dimensions.chest.position, 'within');
+});
+
+test('controller: SIZE_AI_EXPLANATION=false skips the AI call entirely', async () => {
+  let called = false;
+  const { getSizeRecommendation } = loadControllerWith({
+    product: LETTER_PRODUCT,
+    aiExplain: async () => {
+      called = true;
+      return 'should not be used';
+    },
+  });
+  process.env.SIZE_AI_EXPLANATION = 'false';
+  try {
+    const res = mockRes();
+    await getSizeRecommendation(
+      { body: { productId: 'prod_test_1', measurements: { chest: 96, waist: 81 } } },
+      res
+    );
+    assert.equal(res.statusCode, 200);
+    assert.equal(called, false);
+    assert.ok(res.body.data.reason.length > 0);
+  } finally {
+    delete process.env.SIZE_AI_EXPLANATION;
+  }
+});
+
+test('controller: a numeric productId is rejected (ids must be the backend string _id)', async () => {
+  const { getSizeRecommendation } = loadControllerWith({ product: LETTER_PRODUCT });
+  const res = mockRes();
+  await getSizeRecommendation({ body: { productId: 11, measurements: { chest: 96 } } }, res);
+  assert.equal(res.statusCode, 400);
+});
+
+test('controller: out-of-range measurements return a no_match result, not a recommendation', async () => {
+  const { getSizeRecommendation } = loadControllerWith({ product: LETTER_PRODUCT });
+  const res = mockRes();
+  await getSizeRecommendation(
+    { body: { productId: 'prod_test_1', measurements: { chest: 120, waist: 104 } } },
+    res
+  );
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.status, 'no_match');
+  assert.equal(res.body.data.recommendedSize, undefined);
 });

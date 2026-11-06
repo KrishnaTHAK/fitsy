@@ -254,26 +254,12 @@ const rawProducts = [
 ];
 
 // ─── Size charts (cm) ──────────────────────────────────────────────────────
-// Standard body-measurement ranges by letter size, based on common
-// ready-to-wear sizing conventions — attached only to the letter sizes each
-// product actually sells (so sizeChart always stays a subset of `sizes`).
-// Numeric-waist Bottoms (e.g. '24'-'32') don't need a chart: the size label
-// IS the waist measurement, and sizeRecommendationService matches directly
-// against it.
-const LETTER_SIZE_CHART = [
-  { size: 'XS', chestMin: 78, chestMax: 84, waistMin: 62, waistMax: 68, hipMin: 86, hipMax: 90 },
-  { size: 'S', chestMin: 84, chestMax: 90, waistMin: 68, waistMax: 74, hipMin: 90, hipMax: 96 },
-  { size: 'M', chestMin: 90, chestMax: 98, waistMin: 74, waistMax: 82, hipMin: 96, hipMax: 104 },
-  { size: 'L', chestMin: 98, chestMax: 106, waistMin: 82, waistMax: 90, hipMin: 104, hipMax: 112 },
-  { size: 'XL', chestMin: 106, chestMax: 114, waistMin: 90, waistMax: 98, hipMin: 112, hipMax: 120 },
-];
+// Per-category reference charts live in data/sizeCharts.js (shared with the
+// in-memory fallback catalog). Products with no applicable chart get [].
+const { buildSizeChart } = require('./data/sizeCharts');
 
 rawProducts.forEach((product) => {
-  const KNOWN_LETTER_SIZES = new Set(['XS', 'S', 'M', 'L', 'XL']);
-  const isLetterSized = product.sizes.length > 0 && product.sizes.every((s) => KNOWN_LETTER_SIZES.has(s));
-  if (isLetterSized) {
-    product.sizeChart = LETTER_SIZE_CHART.filter((entry) => product.sizes.includes(entry.size));
-  }
+  product.sizeChart = buildSizeChart(product.category, product.sizes);
 });
 
 const importData = async () => {
